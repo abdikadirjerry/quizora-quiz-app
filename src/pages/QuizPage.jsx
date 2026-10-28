@@ -19,13 +19,25 @@ import useQuiz from "../hooks/useQuiz";
 function QuizPage() {
   const location = useLocation();
 
-  const categoryId = location.state?.categoryId ?? "general-knowledge";
-  const categoryName = location.state?.categoryName ?? "General Knowledge";
+  const {
+    categoryId = "general-knowledge",
+    categoryName = "General Knowledge",
+    difficulty = "all",
+    questionCount = 4,
+  } = location.state ?? {};
 
-  const questions = useMemo(
-    () => getQuestionsForCategory(categoryId, categoryName),
-    [categoryId, categoryName],
-  );
+  const questions = useMemo(() => {
+    const categoryQuestions = getQuestionsForCategory(categoryId, categoryName);
+
+    const filteredQuestions =
+      difficulty === "all"
+        ? categoryQuestions
+        : categoryQuestions.filter(
+            (question) => question.difficulty === difficulty,
+          );
+
+    return filteredQuestions.slice(0, questionCount);
+  }, [categoryId, categoryName, difficulty, questionCount]);
 
   const quiz = useQuiz(questions);
   const currentQuestion = quiz.questions[quiz.currentIndex];
@@ -195,6 +207,9 @@ function QuizPage() {
     return (
       <section className="surface-card rounded-3xl p-8 text-center">
         <h1 className="text-xl font-bold text-white">No questions available</h1>
+        <p className="mt-2 text-sm text-text-secondary">
+          Choose another difficulty or category.
+        </p>
         <Link
           to="/explore"
           className="mt-4 inline-block text-sm text-brand-300 hover:text-brand-200"
@@ -229,7 +244,11 @@ function QuizPage() {
               </h1>
 
               <p className="mt-1 text-sm text-text-secondary">
-                Choose the best answer before time runs out.
+                {difficulty === "all"
+                  ? "Mixed difficulty"
+                  : `${difficulty} difficulty`}
+                {" · "}
+                {quiz.totalQuestions} questions
               </p>
             </div>
 
@@ -271,7 +290,9 @@ function QuizPage() {
               <div
                 className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-300 transition-all duration-300"
                 style={{
-                  width: `${((quiz.currentIndex + 1) / quiz.totalQuestions) * 100}%`,
+                  width: `${
+                    ((quiz.currentIndex + 1) / quiz.totalQuestions) * 100
+                  }%`,
                 }}
               />
             </div>
@@ -289,7 +310,7 @@ function QuizPage() {
 
         <div className="p-5 sm:p-8">
           <div className="mb-6 flex flex-wrap items-center gap-2">
-            <span className="rounded-lg border border-brand-400/20 bg-brand-500/10 px-3 py-1.5 text-xs font-semibold text-brand-300">
+            <span className="rounded-lg border border-brand-400/20 bg-brand-500/10 px-3 py-1.5 text-xs font-semibold capitalize text-brand-300">
               {currentQuestion.category.replaceAll("-", " ")}
             </span>
 
