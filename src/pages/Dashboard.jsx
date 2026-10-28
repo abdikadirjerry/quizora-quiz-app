@@ -8,68 +8,124 @@ import {
   Target,
   Trophy,
 } from "lucide-react";
-
 import { Link } from "react-router";
 
 import Button from "../components/ui/Button";
 import PageHeader from "../components/ui/PageHeader";
-
-const stats = [
-  {
-    label: "Quizzes completed",
-    value: "0",
-    note: "Your journey starts here",
-    icon: BrainCircuit,
-    iconStyle: "bg-brand-500/10 text-brand-300",
-  },
-  {
-    label: "Average accuracy",
-    value: "—",
-    note: "No attempts yet",
-    icon: Target,
-    iconStyle: "bg-emerald-400/10 text-emerald-300",
-  },
-  {
-    label: "Time invested",
-    value: "0 min",
-    note: "Ready for your first quiz?",
-    icon: Clock3,
-    iconStyle: "bg-sky-400/10 text-sky-300",
-  },
-  {
-    label: "Current streak",
-    value: "0 days",
-    note: "Start a learning habit",
-    icon: Flame,
-    iconStyle: "bg-amber-400/10 text-amber-300",
-  },
-];
+import { getQuizHistory, getQuizStatistics } from "../utils/quizStorage";
 
 const categories = [
   {
+    id: "science-nature",
     title: "Science & Nature",
     description: "Discover the universe, nature, and scientific ideas.",
-    count: "20 questions",
     icon: Sparkles,
     style: "bg-emerald-400/10 text-emerald-300",
   },
   {
+    id: "technology",
     title: "Technology",
     description: "Explore computers, the internet, and innovation.",
-    count: "15 questions",
     icon: BrainCircuit,
     style: "bg-sky-400/10 text-sky-300",
   },
   {
+    id: "general-knowledge",
     title: "General Knowledge",
     description: "Challenge yourself across a variety of topics.",
-    count: "25 questions",
     icon: Trophy,
     style: "bg-brand-400/10 text-brand-300",
   },
 ];
 
+function getCurrentStreak(history) {
+  if (history.length === 0) return 0;
+
+  const completedDates = new Set(
+    history.map((attempt) => {
+      const date = new Date(attempt.completedAt);
+      return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    }),
+  );
+
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = `${yesterday.getFullYear()}-${yesterday.getMonth()}-${yesterday.getDate()}`;
+
+  if (!completedDates.has(todayKey) && !completedDates.has(yesterdayKey)) {
+    return 0;
+  }
+
+  const startDate = completedDates.has(todayKey) ? today : yesterday;
+  const date = new Date(startDate);
+  let streak = 0;
+
+  while (true) {
+    const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+
+    if (!completedDates.has(key)) break;
+
+    streak += 1;
+    date.setDate(date.getDate() - 1);
+  }
+
+  return streak;
+}
+
 function Dashboard() {
+  const history = getQuizHistory();
+  const statistics = getQuizStatistics(history);
+  const streak = getCurrentStreak(history);
+
+  const totalMinutes =
+    history.reduce(
+      (total, attempt) => total + (Number(attempt.totalQuestions) || 0) * 20,
+      0,
+    ) / 60;
+
+  const stats = [
+    {
+      label: "Quizzes completed",
+      value: statistics.totalQuizzes.toString(),
+      note:
+        statistics.totalQuizzes === 0
+          ? "Your journey starts here"
+          : "Keep learning and growing",
+      icon: BrainCircuit,
+      iconStyle: "bg-brand-500/10 text-brand-300",
+    },
+    {
+      label: "Average accuracy",
+      value:
+        statistics.totalQuizzes > 0 ? `${statistics.averageAccuracy}%` : "—",
+      note:
+        statistics.totalQuizzes > 0
+          ? `${statistics.totalCorrect} correct answers`
+          : "Complete your first quiz",
+      icon: Target,
+      iconStyle: "bg-emerald-400/10 text-emerald-300",
+    },
+    {
+      label: "Estimated time",
+      value:
+        totalMinutes >= 60
+          ? `${(totalMinutes / 60).toFixed(1)} hr`
+          : `${Math.round(totalMinutes)} min`,
+      note: "Based on quiz timer limits",
+      icon: Clock3,
+      iconStyle: "bg-sky-400/10 text-sky-300",
+    },
+    {
+      label: "Current streak",
+      value: `${streak} ${streak === 1 ? "day" : "days"}`,
+      note: streak > 0 ? "Great consistency!" : "Start a learning habit",
+      icon: Flame,
+      iconStyle: "bg-amber-400/10 text-amber-300",
+    },
+  ];
+
   return (
     <div>
       <PageHeader
@@ -134,13 +190,15 @@ function Dashboard() {
 
             <p className="mt-4 text-sm leading-7 text-text-secondary">
               Choose a topic, test what you know, and discover what you can
-              learn next. Your first challenge is waiting.
+              learn next. Every quiz is an opportunity to improve.
             </p>
 
             <Link to="/explore" className="mt-6 inline-flex">
               <Button size="lg">
                 <Play size={16} />
-                Find your first quiz
+                {statistics.totalQuizzes > 0
+                  ? "Play another quiz"
+                  : "Find your first quiz"}
               </Button>
             </Link>
           </div>
@@ -154,7 +212,6 @@ function Dashboard() {
 
             <div>
               <h2 className="font-semibold text-white">Daily inspiration</h2>
-
               <p className="mt-1 text-xs text-text-muted">
                 A thought for curious minds
               </p>
@@ -168,7 +225,7 @@ function Dashboard() {
 
           <p className="mt-4 text-xs leading-5 text-text-muted">
             Your learning journey doesn't need to be perfect. It just needs to
-            begin.
+            continue.
           </p>
 
           <div className="mt-6 border-t border-border-subtle pt-5">
@@ -191,7 +248,7 @@ function Dashboard() {
         <PageHeader
           eyebrow="EXPLORE YOUR INTERESTS"
           title="Find your next challenge"
-          description="Choose a category that interests you. We'll add difficulty selection and playable quizzes in the next milestones."
+          description="Choose a category that interests you and test your knowledge."
           action={
             <Link
               to="/explore"
@@ -209,7 +266,7 @@ function Dashboard() {
 
             return (
               <article
-                key={category.title}
+                key={category.id}
                 className="surface-card group p-5 transition duration-200 hover:-translate-y-1 hover:border-brand-400/30"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -220,7 +277,12 @@ function Dashboard() {
                   </span>
 
                   <span className="rounded-lg border border-border-subtle px-2.5 py-1 text-[10px] text-text-muted">
-                    {category.count}
+                    {
+                      history.filter(
+                        (attempt) => attempt.category === category.id,
+                      ).length
+                    }{" "}
+                    completed
                   </span>
                 </div>
 
