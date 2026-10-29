@@ -8,6 +8,8 @@ import {
   CheckCircle2,
   Clock3,
   Lightbulb,
+  Pause,
+  Play,
   RotateCcw,
   Target,
   Trophy,
@@ -55,7 +57,20 @@ function QuizPage() {
         (target.isContentEditable ||
           ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
 
-      if (isTypingTarget || quiz.status !== "playing") return;
+      if (isTypingTarget) return;
+
+      if (event.key.toLowerCase() === "p") {
+        if (quiz.status === "playing") {
+          event.preventDefault();
+          quiz.pauseQuiz();
+        } else if (quiz.status === "paused") {
+          event.preventDefault();
+          quiz.resumeQuiz();
+        }
+        return;
+      }
+
+      if (quiz.status !== "playing") return;
 
       if (event.key === "Enter") {
         if (quiz.selectedAnswer !== null) {
@@ -88,6 +103,8 @@ function QuizPage() {
     quiz.selectedAnswer,
     quiz.nextQuestion,
     quiz.selectAnswer,
+    quiz.pauseQuiz,
+    quiz.resumeQuiz,
     currentQuestion,
   ]);
 
@@ -152,7 +169,7 @@ function QuizPage() {
           Back to quizzes
         </Link>
 
-        <div className="surface-card overflow-hidden rounded-3xl">
+        <div className="relative surface-card overflow-hidden rounded-3xl">
           <div className="relative overflow-hidden border-b border-border-subtle bg-gradient-to-br from-brand-500/20 via-surface-raised to-surface p-8 text-center sm:p-12">
             <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-brand-500/10 blur-3xl" />
 
@@ -473,7 +490,7 @@ function QuizPage() {
         All quizzes
       </Link>
 
-      <div className="surface-card overflow-hidden rounded-3xl">
+      <div className="relative surface-card overflow-hidden rounded-3xl">
         <div className="border-b border-border-subtle p-5 sm:p-7">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -495,21 +512,33 @@ function QuizPage() {
               </p>
             </div>
 
-            <div
-              role="timer"
-              aria-label={`${quiz.timeLeft} seconds remaining`}
-              aria-live={isTimerUrgent ? "assertive" : "off"}
-              className={`flex min-w-24 items-center justify-center gap-2 rounded-xl border px-4 py-3 transition-colors ${
-                isTimerUrgent
-                  ? "border-danger/30 bg-danger/10 text-danger"
-                  : "border-border-subtle bg-surface-raised text-white"
-              }`}
-            >
-              <Clock3 size={17} />
+            <div className="flex items-center gap-2">
+              <div
+                role="timer"
+                aria-label={`${quiz.timeLeft} seconds remaining`}
+                aria-live={isTimerUrgent ? "assertive" : "off"}
+                className={`flex min-w-24 items-center justify-center gap-2 rounded-xl border px-4 py-3 transition-colors ${
+                  isTimerUrgent
+                    ? "border-danger/30 bg-danger/10 text-danger"
+                    : "border-border-subtle bg-surface-raised text-white"
+                }`}
+              >
+                <Clock3 size={17} />
 
-              <span className="font-mono text-lg font-bold tabular-nums">
-                00:{String(quiz.timeLeft).padStart(2, "0")}
-              </span>
+                <span className="font-mono text-lg font-bold tabular-nums">
+                  00:{String(quiz.timeLeft).padStart(2, "0")}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={quiz.pauseQuiz}
+                aria-label="Pause quiz"
+                aria-keyshortcuts="P"
+                className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-border-subtle bg-surface-raised text-text-secondary transition hover:border-brand-400/40 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
+              >
+                <Pause size={18} />
+              </button>
             </div>
           </div>
 
@@ -727,6 +756,50 @@ function QuizPage() {
             </Button>
           </div>
         </div>
+
+        {quiz.status === "paused" && (
+          <div
+            className="absolute inset-0 z-20 flex items-center justify-center bg-surface/90 p-5 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="quiz-paused-title"
+            aria-describedby="quiz-paused-description"
+          >
+            <div className="w-full max-w-sm rounded-3xl border border-border-subtle bg-surface-raised p-7 text-center shadow-2xl sm:p-9">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-brand-400/20 bg-brand-500/10 text-brand-300">
+                <Pause size={28} />
+              </div>
+
+              <h2
+                id="quiz-paused-title"
+                className="display-font mt-5 text-2xl font-bold text-white"
+              >
+                Quiz paused
+              </h2>
+
+              <p
+                id="quiz-paused-description"
+                className="mt-2 text-sm leading-6 text-text-secondary"
+              >
+                Take a breath. Your remaining time is saved while the quiz is
+                paused.
+              </p>
+
+              <Button
+                onClick={quiz.resumeQuiz}
+                size="lg"
+                className="mt-6 w-full"
+              >
+                <Play size={16} />
+                Resume quiz
+              </Button>
+
+              <p className="mt-3 text-xs text-text-muted">
+                Press P to resume or pause the quiz.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex items-start gap-3 rounded-2xl border border-border-subtle bg-surface-raised/60 p-4">

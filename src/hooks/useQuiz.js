@@ -55,27 +55,27 @@ function quizReducer(state, action) {
         return state;
       }
 
-      return {
-        ...state,
-        selectedAnswer: action.index,
-      };
+      return { ...state, selectedAnswer: action.index };
 
     case "NEXT":
       if (state.status !== "playing") return state;
-
       return recordAnswer(state, state.selectedAnswer);
 
     case "TICK":
       if (state.status !== "playing") return state;
-
       if (state.timeLeft <= 1) {
         return recordAnswer(state, state.selectedAnswer);
       }
 
-      return {
-        ...state,
-        timeLeft: state.timeLeft - 1,
-      };
+      return { ...state, timeLeft: state.timeLeft - 1 };
+
+    case "PAUSE":
+      if (state.status !== "playing") return state;
+      return { ...state, status: "paused" };
+
+    case "RESUME":
+      if (state.status !== "paused") return state;
+      return { ...state, status: "playing" };
 
     case "RESET":
       return createInitialState(action.questions);
@@ -91,7 +91,6 @@ export default function useQuiz(questions) {
     questions,
     createInitialState,
   );
-
   const lastSavedAttempt = useRef(null);
 
   useEffect(() => {
@@ -163,6 +162,8 @@ export default function useQuiz(questions) {
         : 0,
     selectAnswer: (index) => dispatch({ type: "SELECT_ANSWER", index }),
     nextQuestion: () => dispatch({ type: "NEXT" }),
+    pauseQuiz: () => dispatch({ type: "PAUSE" }),
+    resumeQuiz: () => dispatch({ type: "RESUME" }),
     restartQuiz: () => dispatch({ type: "RESET", questions }),
   };
 }
@@ -171,6 +172,5 @@ function getAttemptDifficulty(questions) {
   const difficulties = [
     ...new Set(questions.map((question) => question.difficulty)),
   ];
-
   return difficulties.length === 1 ? difficulties[0] : "Mixed";
 }
