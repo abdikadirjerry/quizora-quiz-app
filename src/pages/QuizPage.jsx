@@ -21,7 +21,7 @@ import Button from "../components/ui/Button";
 import { getQuestionsForCategory } from "../data/questions";
 import useQuiz from "../hooks/useQuiz";
 
-const SECONDS_PER_QUESTION = 20;
+const DEFAULT_SECONDS_PER_QUESTION = 20;
 
 function QuizPage() {
   const location = useLocation();
@@ -34,6 +34,7 @@ function QuizPage() {
     categoryName = "General Knowledge",
     difficulty = "all",
     questionCount = 4,
+    timerDuration = DEFAULT_SECONDS_PER_QUESTION,
   } = location.state ?? {};
 
   const questions = useMemo(() => {
@@ -49,11 +50,13 @@ function QuizPage() {
     return filteredQuestions.slice(0, questionCount);
   }, [categoryId, categoryName, difficulty, questionCount]);
 
-  const quiz = useQuiz(questions);
+  const quiz = useQuiz(questions, timerDuration);
   const currentQuestion = quiz.questions[quiz.currentIndex];
 
   useEffect(() => {
-    if (quiz.status !== "playing" && quiz.status !== "paused") return undefined;
+    if (quiz.status !== "playing" && quiz.status !== "paused") {
+      return undefined;
+    }
 
     function handleBeforeUnload(event) {
       event.preventDefault();
@@ -61,12 +64,16 @@ function QuizPage() {
     }
 
     window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
   }, [quiz.status]);
 
   useEffect(() => {
     function handleKeyDown(event) {
       const target = event.target;
+
       const isTypingTarget =
         target instanceof HTMLElement &&
         (target.isContentEditable ||
@@ -82,6 +89,7 @@ function QuizPage() {
           event.preventDefault();
           quiz.resumeQuiz();
         }
+
         return;
       }
 
@@ -92,15 +100,24 @@ function QuizPage() {
           event.preventDefault();
           quiz.nextQuestion();
         }
+
         return;
       }
 
       if (quiz.selectedAnswer !== null) return;
 
       const key = event.key.toLowerCase();
-      const answerIndex = { 1: 0, a: 0, 2: 1, b: 1, 3: 2, c: 2, 4: 3, d: 3 }[
-        key
-      ];
+
+      const answerIndex = {
+        1: 0,
+        a: 0,
+        2: 1,
+        b: 1,
+        3: 2,
+        c: 2,
+        4: 3,
+        d: 3,
+      }[key];
 
       if (
         answerIndex !== undefined &&
@@ -112,7 +129,10 @@ function QuizPage() {
     }
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, [
     quiz.status,
     quiz.selectedAnswer,
@@ -128,8 +148,11 @@ function QuizPage() {
       ? Math.round((quiz.score / quiz.totalQuestions) * 100)
       : 0;
 
-  const timerPercentage = (quiz.timeLeft / SECONDS_PER_QUESTION) * 100;
-  const isTimerUrgent = quiz.timeLeft <= 5;
+  const timerPercentage = quiz.hasTimer
+    ? (quiz.timeLeft / timerDuration) * 100
+    : 0;
+
+  const isTimerUrgent = quiz.hasTimer && quiz.timeLeft <= 5;
   const isAnswerSelected = quiz.selectedAnswer !== null;
 
   const isSelectedCorrect =
@@ -274,11 +297,11 @@ function QuizPage() {
               );
             })}
           </div>
-
           <div className="space-y-5 px-5 pb-6 sm:px-6">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h2 className="text-lg font-bold text-white">Answer review</h2>
+
                 <p className="mt-1 text-xs leading-5 text-text-muted">
                   Check your answers and learn why each correct answer is right.
                 </p>
@@ -390,6 +413,7 @@ function QuizPage() {
                           <div className="mt-4 space-y-3 text-xs leading-5">
                             <div>
                               <p className="text-text-muted">Your answer</p>
+
                               <p
                                 className={`mt-1 font-medium ${
                                   isCorrect
@@ -408,6 +432,7 @@ function QuizPage() {
 
                             <div>
                               <p className="text-text-muted">Correct answer</p>
+
                               <p className="mt-1 font-medium text-success">
                                 {question.options[question.correctAnswerIndex]}
                               </p>
@@ -529,22 +554,28 @@ function QuizPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <div
-                role="timer"
-                aria-label={`${quiz.timeLeft} seconds remaining`}
-                aria-live={isTimerUrgent ? "assertive" : "off"}
-                className={`flex min-w-24 items-center justify-center gap-2 rounded-xl border px-4 py-3 transition-colors ${
-                  isTimerUrgent
-                    ? "border-danger/30 bg-danger/10 text-danger"
-                    : "border-border-subtle bg-surface-raised text-white"
-                }`}
-              >
-                <Clock3 size={17} />
-
-                <span className="font-mono text-lg font-bold tabular-nums">
-                  00:{String(quiz.timeLeft).padStart(2, "0")}
-                </span>
-              </div>
+              {quiz.hasTimer ? (
+                <div
+                  role="timer"
+                  aria-label={`${quiz.timeLeft} seconds remaining`}
+                  aria-live={isTimerUrgent ? "assertive" : "off"}
+                  className={`flex min-w-24 items-center justify-center gap-2 rounded-xl border px-4 py-3 transition-colors ${
+                    isTimerUrgent
+                      ? "border-danger/30 bg-danger/10 text-danger"
+                      : "border-border-subtle bg-surface-raised text-white"
+                  }`}
+                >
+                  <Clock3 size={17} />
+                  <span className="font-mono text-lg font-bold tabular-nums">
+                    00:{String(quiz.timeLeft).padStart(2, "0")}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-xl border border-border-subtle bg-surface-raised px-3 py-3 text-sm font-medium text-text-secondary">
+                  <Clock3 size={17} />
+                  No timer
+                </div>
+              )}
 
               <button
                 type="button"
@@ -557,7 +588,6 @@ function QuizPage() {
               </button>
             </div>
           </div>
-
           <div className="mt-6">
             <div className="mb-2 flex items-center justify-between text-xs">
               <span className="text-text-secondary">
@@ -590,14 +620,16 @@ function QuizPage() {
               />
             </div>
 
-            <div className="mt-3 h-1 overflow-hidden rounded-full bg-surface-overlay">
-              <div
-                className={`h-full rounded-full transition-all duration-1000 ${
-                  isTimerUrgent ? "bg-danger" : "bg-brand-400"
-                }`}
-                style={{ width: `${timerPercentage}%` }}
-              />
-            </div>
+            {quiz.hasTimer && (
+              <div className="mt-3 h-1 overflow-hidden rounded-full bg-surface-overlay">
+                <div
+                  className={`h-full rounded-full transition-all duration-1000 ${
+                    isTimerUrgent ? "bg-danger" : "bg-brand-400"
+                  }`}
+                  style={{ width: `${timerPercentage}%` }}
+                />
+              </div>
+            )}
 
             {isTimerUrgent && (
               <p className="mt-2 text-right text-xs font-medium text-danger">
@@ -632,9 +664,11 @@ function QuizPage() {
           <div className="mt-8 grid gap-3">
             {currentQuestion.options.map((option, index) => {
               const isSelected = quiz.selectedAnswer === index;
+
               const isCorrectOption =
                 isAnswerSelected &&
                 index === currentQuestion.correctAnswerIndex;
+
               const isWrongSelected = isSelected && !isSelectedCorrect;
               const letters = ["A", "B", "C", "D"];
 
@@ -647,10 +681,12 @@ function QuizPage() {
               if (isSelected && isSelectedCorrect) {
                 optionStyle =
                   "border-success/50 bg-success/10 ring-1 ring-success/20";
+
                 letterStyle = "border-success bg-success text-white";
               } else if (isWrongSelected) {
                 optionStyle =
                   "border-danger/50 bg-danger/10 ring-1 ring-danger/20";
+
                 letterStyle = "border-danger bg-danger text-white";
               } else if (isCorrectOption) {
                 optionStyle = "border-success/50 bg-success/10";
@@ -809,6 +845,7 @@ function QuizPage() {
                 >
                   Stay in quiz
                 </Button>
+
                 <Button
                   onClick={() => navigate("/explore")}
                   variant="secondary"
@@ -822,7 +859,6 @@ function QuizPage() {
             </div>
           </div>
         )}
-
         {quiz.status === "paused" && !showExitConfirm && (
           <div
             className="absolute inset-0 z-20 flex items-center justify-center bg-surface/90 p-5 backdrop-blur-sm"
@@ -877,6 +913,7 @@ function QuizPage() {
             every option carefully. Learn from each explanation, and remember
             that skipped questions count as incorrect.
           </p>
+
           <p aria-label="Keyboard shortcuts">
             <span className="font-semibold text-white">
               Keyboard shortcuts:

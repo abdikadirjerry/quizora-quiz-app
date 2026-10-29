@@ -1,15 +1,24 @@
 import { useEffect, useReducer, useRef } from "react";
 import { saveQuizAttempt } from "../utils/quizStorage";
 
-const SECONDS_PER_QUESTION = 20;
+const DEFAULT_SECONDS_PER_QUESTION = 20;
 
-function createInitialState(questions) {
+function normalizeTimerDuration(value) {
+  const duration = Number(value ?? DEFAULT_SECONDS_PER_QUESTION);
+
+  return [0, 10, 20, 30].includes(duration)
+    ? duration
+    : DEFAULT_SECONDS_PER_QUESTION;
+}
+
+function createInitialState({ questions, timerDuration }) {
   return {
     questions,
+    timerDuration,
     currentIndex: 0,
     selectedAnswer: null,
     answers: [],
-    timeLeft: SECONDS_PER_QUESTION,
+    timeLeft: timerDuration === 0 ? null : timerDuration,
     status: "playing",
   };
 }
@@ -44,7 +53,7 @@ function recordAnswer(state, answerIndex) {
     answers,
     currentIndex: state.currentIndex + 1,
     selectedAnswer: null,
-    timeLeft: SECONDS_PER_QUESTION,
+    timeLeft: state.timerDuration === 0 ? null : state.timerDuration,
   };
 }
 
@@ -62,7 +71,10 @@ function quizReducer(state, action) {
       return recordAnswer(state, state.selectedAnswer);
 
     case "TICK":
-      if (state.status !== "playing") return state;
+      if (state.status !== "playing" || state.timerDuration === 0) {
+        return state;
+      }
+
       if (state.timeLeft <= 1) {
         return recordAnswer(state, state.selectedAnswer);
       }
@@ -78,34 +90,49 @@ function quizReducer(state, action) {
       return { ...state, status: "playing" };
 
     case "RESET":
-      return createInitialState(action.questions);
+      return createInitialState({
+        questions: action.questions,
+        timerDuration: normalizeTimerDuration(action.timerDuration),
+      });
 
     default:
       return state;
   }
 }
 
-export default function useQuiz(questions) {
+export default function useQuiz(
+  questions,
+  requestedTimerDuration = DEFAULT_SECONDS_PER_QUESTION,
+) {
+  const timerDuration = normalizeTimerDuration(requestedTimerDuration);
+
   const [state, dispatch] = useReducer(
     quizReducer,
-    questions,
+    { questions, timerDuration },
     createInitialState,
   );
+
   const lastSavedAttempt = useRef(null);
 
   useEffect(() => {
-    dispatch({ type: "RESET", questions });
-  }, [questions]);
+    dispatch({
+      type: "RESET",
+      questions,
+      timerDuration,
+    });
+  }, [questions, timerDuration]);
 
   useEffect(() => {
-    if (state.status !== "playing") return undefined;
+    if (state.status !== "playing" || state.timerDuration === 0) {
+      return undefined;
+    }
 
     const timer = window.setInterval(() => {
       dispatch({ type: "TICK" });
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, [state.status, state.currentIndex]);
+  }, [state.status, state.currentIndex, state.timerDuration]);
 
   const score = state.answers.filter((answer) => answer.isCorrect).length;
 
@@ -154,6 +181,7 @@ export default function useQuiz(questions) {
     ...state,
     score,
     totalQuestions: state.questions.length,
+    hasTimer: state.timerDuration > 0,
     progress:
       state.questions.length > 0
         ? ((state.currentIndex + (state.status === "completed" ? 1 : 0)) /
@@ -164,7 +192,12 @@ export default function useQuiz(questions) {
     nextQuestion: () => dispatch({ type: "NEXT" }),
     pauseQuiz: () => dispatch({ type: "PAUSE" }),
     resumeQuiz: () => dispatch({ type: "RESUME" }),
-    restartQuiz: () => dispatch({ type: "RESET", questions }),
+    restartQuiz: () =>
+      dispatch({
+        type: "RESET",
+        questions,
+        timerDuration,
+      }),
   };
 }
 
@@ -172,5 +205,6 @@ function getAttemptDifficulty(questions) {
   const difficulties = [
     ...new Set(questions.map((question) => question.difficulty)),
   ];
+
   return difficulties.length === 1 ? difficulties[0] : "Mixed";
 }
