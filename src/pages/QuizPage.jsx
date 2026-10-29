@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router";
 import {
   ArrowLeft,
@@ -46,6 +46,50 @@ function QuizPage() {
 
   const quiz = useQuiz(questions);
   const currentQuestion = quiz.questions[quiz.currentIndex];
+
+  useEffect(() => {
+    function handleKeyDown(event) {
+      const target = event.target;
+      const isTypingTarget =
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
+
+      if (isTypingTarget || quiz.status !== "playing") return;
+
+      if (event.key === "Enter") {
+        if (quiz.selectedAnswer !== null) {
+          event.preventDefault();
+          quiz.nextQuestion();
+        }
+        return;
+      }
+
+      if (quiz.selectedAnswer !== null) return;
+
+      const key = event.key.toLowerCase();
+      const answerIndex = { 1: 0, a: 0, 2: 1, b: 1, 3: 2, c: 2, 4: 3, d: 3 }[
+        key
+      ];
+
+      if (
+        answerIndex !== undefined &&
+        answerIndex < (currentQuestion?.options.length ?? 0)
+      ) {
+        event.preventDefault();
+        quiz.selectAnswer(answerIndex);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    quiz.status,
+    quiz.selectedAnswer,
+    quiz.nextQuestion,
+    quiz.selectAnswer,
+    currentQuestion,
+  ]);
 
   const accuracy =
     quiz.totalQuestions > 0
@@ -533,7 +577,10 @@ function QuizPage() {
             </span>
           </div>
 
-          <h2 className="display-font max-w-3xl text-2xl font-bold leading-relaxed tracking-tight text-white sm:text-3xl">
+          <h2
+            id="quiz-question"
+            className="display-font max-w-3xl text-2xl font-bold leading-relaxed tracking-tight text-white sm:text-3xl"
+          >
             {currentQuestion.question}
           </h2>
 
@@ -572,7 +619,10 @@ function QuizPage() {
                   onClick={() => quiz.selectAnswer(index)}
                   disabled={isAnswerSelected}
                   aria-pressed={isSelected}
-                  className={`group flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition duration-200 sm:p-5 ${optionStyle} disabled:cursor-default`}
+                  aria-label={`Option ${letters[index]}: ${option}`}
+                  aria-describedby="quiz-question"
+                  aria-keyshortcuts={`${index + 1} ${letters[index]}`}
+                  className={`group flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface sm:p-5 ${optionStyle} disabled:cursor-default`}
                 >
                   <span
                     className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border text-sm font-bold transition ${letterStyle}`}
@@ -614,7 +664,9 @@ function QuizPage() {
 
           {isAnswerSelected && (
             <div
+              id="answer-feedback"
               role="status"
+              aria-live="polite"
               className={`mt-5 rounded-2xl border p-4 ${
                 isSelectedCorrect
                   ? "border-success/20 bg-success/5"
@@ -660,7 +712,12 @@ function QuizPage() {
                 : "Select an answer or skip this question."}
             </p>
 
-            <Button onClick={quiz.nextQuestion} size="lg" className="min-w-40">
+            <Button
+              onClick={quiz.nextQuestion}
+              size="lg"
+              className="min-w-40"
+              aria-keyshortcuts={isAnswerSelected ? "Enter" : undefined}
+            >
               {quiz.currentIndex === quiz.totalQuestions - 1
                 ? "Finish quiz"
                 : !isAnswerSelected
@@ -675,11 +732,30 @@ function QuizPage() {
       <div className="flex items-start gap-3 rounded-2xl border border-border-subtle bg-surface-raised/60 p-4">
         <Lightbulb size={18} className="mt-0.5 shrink-0 text-brand-300" />
 
-        <p className="text-xs leading-5 text-text-secondary">
-          <span className="font-semibold text-white">Quick tip:</span> Read
-          every option carefully. Learn from each explanation, and remember that
-          skipped questions count as incorrect.
-        </p>
+        <div className="space-y-2 text-xs leading-5 text-text-secondary">
+          <p>
+            <span className="font-semibold text-white">Quick tip:</span> Read
+            every option carefully. Learn from each explanation, and remember
+            that skipped questions count as incorrect.
+          </p>
+          <p aria-label="Keyboard shortcuts">
+            <span className="font-semibold text-white">
+              Keyboard shortcuts:
+            </span>{" "}
+            <kbd className="rounded border border-border-subtle bg-surface px-1.5 py-0.5 font-mono text-text-primary">
+              1–4
+            </kbd>{" "}
+            or{" "}
+            <kbd className="rounded border border-border-subtle bg-surface px-1.5 py-0.5 font-mono text-text-primary">
+              A–D
+            </kbd>{" "}
+            to choose an answer;{" "}
+            <kbd className="rounded border border-border-subtle bg-surface px-1.5 py-0.5 font-mono text-text-primary">
+              Enter
+            </kbd>{" "}
+            to continue after answering.
+          </p>
+        </div>
       </div>
     </section>
   );
