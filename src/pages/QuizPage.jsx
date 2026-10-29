@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import {
   ArrowLeft,
   ArrowRight,
@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Clock3,
   Lightbulb,
+  LogOut,
   Pause,
   Play,
   RotateCcw,
@@ -24,7 +25,9 @@ const SECONDS_PER_QUESTION = 20;
 
 function QuizPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [reviewFilter, setReviewFilter] = useState("all");
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const {
     categoryId = "general-knowledge",
@@ -48,6 +51,18 @@ function QuizPage() {
 
   const quiz = useQuiz(questions);
   const currentQuestion = quiz.questions[quiz.currentIndex];
+
+  useEffect(() => {
+    if (quiz.status !== "playing" && quiz.status !== "paused") return undefined;
+
+    function handleBeforeUnload(event) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [quiz.status]);
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -482,13 +497,14 @@ function QuizPage() {
 
   return (
     <section className="mx-auto max-w-4xl space-y-6">
-      <Link
-        to="/explore"
-        className="inline-flex items-center gap-2 text-sm text-text-secondary transition hover:text-white"
+      <button
+        type="button"
+        onClick={() => setShowExitConfirm(true)}
+        className="inline-flex items-center gap-2 text-sm text-text-secondary transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
       >
         <ArrowLeft size={16} />
         All quizzes
-      </Link>
+      </button>
 
       <div className="relative surface-card overflow-hidden rounded-3xl">
         <div className="border-b border-border-subtle p-5 sm:p-7">
@@ -757,7 +773,57 @@ function QuizPage() {
           </div>
         </div>
 
-        {quiz.status === "paused" && (
+        {showExitConfirm && (
+          <div
+            className="absolute inset-0 z-30 flex items-center justify-center bg-surface/95 p-5 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="quiz-exit-title"
+            aria-describedby="quiz-exit-description"
+          >
+            <div className="w-full max-w-sm rounded-3xl border border-border-subtle bg-surface-raised p-7 text-center shadow-2xl sm:p-9">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-danger/20 bg-danger/10 text-danger">
+                <LogOut size={27} />
+              </div>
+
+              <h2
+                id="quiz-exit-title"
+                className="display-font mt-5 text-2xl font-bold text-white"
+              >
+                Leave this quiz?
+              </h2>
+
+              <p
+                id="quiz-exit-description"
+                className="mt-2 text-sm leading-6 text-text-secondary"
+              >
+                Your current progress will be lost if you leave now. Are you
+                sure you want to exit?
+              </p>
+
+              <div className="mt-6 grid gap-3">
+                <Button
+                  onClick={() => setShowExitConfirm(false)}
+                  size="lg"
+                  className="w-full"
+                >
+                  Stay in quiz
+                </Button>
+                <Button
+                  onClick={() => navigate("/explore")}
+                  variant="secondary"
+                  size="lg"
+                  className="w-full"
+                >
+                  Leave quiz
+                  <ArrowRight size={16} />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {quiz.status === "paused" && !showExitConfirm && (
           <div
             className="absolute inset-0 z-20 flex items-center justify-center bg-surface/90 p-5 backdrop-blur-sm"
             role="dialog"
