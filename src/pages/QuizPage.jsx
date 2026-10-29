@@ -1,18 +1,19 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useLocation } from "react-router";
 import {
   ArrowLeft,
   ArrowRight,
+  Award,
   Check,
   CheckCircle2,
   Clock3,
   Lightbulb,
   RotateCcw,
+  Target,
   Trophy,
   XCircle,
   Zap,
 } from "lucide-react";
-
 import Button from "../components/ui/Button";
 import { getQuestionsForCategory } from "../data/questions";
 import useQuiz from "../hooks/useQuiz";
@@ -21,6 +22,7 @@ const SECONDS_PER_QUESTION = 20;
 
 function QuizPage() {
   const location = useLocation();
+  const [reviewFilter, setReviewFilter] = useState("all");
 
   const {
     categoryId = "general-knowledge",
@@ -51,9 +53,7 @@ function QuizPage() {
       : 0;
 
   const timerPercentage = (quiz.timeLeft / SECONDS_PER_QUESTION) * 100;
-
   const isTimerUrgent = quiz.timeLeft <= 5;
-
   const isAnswerSelected = quiz.selectedAnswer !== null;
 
   const isSelectedCorrect =
@@ -65,8 +65,41 @@ function QuizPage() {
       (answer) => answer.selectedAnswerIndex === null,
     ).length;
 
+    const incorrectCount = quiz.totalQuestions - quiz.score - unansweredCount;
+
+    const reviewQuestions = quiz.questions
+      .map((question, index) => ({
+        question,
+        answer: quiz.answers[index],
+        index,
+      }))
+      .filter(({ answer }) => {
+        if (reviewFilter === "incorrect") {
+          return answer && !answer.isCorrect && !answer.timedOut;
+        }
+
+        if (reviewFilter === "unanswered") {
+          return answer?.selectedAnswerIndex === null;
+        }
+
+        if (reviewFilter === "correct") {
+          return answer?.isCorrect;
+        }
+
+        return true;
+      });
+
+    const performanceMessage =
+      accuracy >= 90
+        ? "Outstanding performance!"
+        : accuracy >= 70
+          ? "Great work!"
+          : accuracy >= 50
+            ? "Good effort. Keep improving!"
+            : "Every attempt is a chance to learn!";
+
     return (
-      <section className="mx-auto max-w-3xl space-y-6">
+      <section className="mx-auto max-w-4xl space-y-6">
         <Link
           to="/explore"
           className="inline-flex items-center gap-2 text-sm text-text-secondary transition hover:text-white"
@@ -80,7 +113,7 @@ function QuizPage() {
             <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-brand-500/10 blur-3xl" />
 
             <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl border border-brand-400/30 bg-brand-500/15 text-brand-300">
-              <Trophy size={38} />
+              {accuracy >= 80 ? <Trophy size={38} /> : <Award size={38} />}
             </div>
 
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand-300">
@@ -88,16 +121,12 @@ function QuizPage() {
             </p>
 
             <h1 className="display-font mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              {accuracy >= 80
-                ? "Outstanding work!"
-                : accuracy >= 50
-                  ? "Nice effort!"
-                  : "Keep learning!"}
+              {performanceMessage}
             </h1>
 
             <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-text-secondary">
-              You finished {categoryName}. Review your answers, learn from each
-              explanation, and challenge yourself again.
+              You finished {categoryName}. Review your answers, understand your
+              mistakes, and use what you learned in your next challenge.
             </p>
 
             <div className="mt-8">
@@ -123,135 +152,229 @@ function QuizPage() {
             <p className="mt-2 text-xs text-text-muted">{accuracy}% accuracy</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 p-6 sm:grid-cols-3">
-            <div className="rounded-2xl border border-border-subtle bg-surface-raised p-4">
-              <p className="text-xs text-text-muted">Accuracy</p>
-              <p className="display-font mt-2 text-2xl font-bold text-white">
-                {accuracy}%
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border-subtle bg-surface-raised p-4">
-              <p className="text-xs text-text-muted">Questions</p>
-              <p className="display-font mt-2 text-2xl font-bold text-white">
-                {quiz.totalQuestions}
-              </p>
-            </div>
-
-            <div className="col-span-2 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:col-span-1">
-              <p className="text-xs text-text-muted">Unanswered</p>
-              <p className="display-font mt-2 text-2xl font-bold text-white">
-                {unansweredCount}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4 px-6 pb-6">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-              <h2 className="text-sm font-bold text-white">Answer review</h2>
-
-              <p className="text-xs text-text-muted">
-                Learn from every question.
-              </p>
-            </div>
-
-            {quiz.questions.map((question, index) => {
-              const answer = quiz.answers[index];
-              const isCorrect = answer?.isCorrect;
-              const selectedAnswerIndex = answer?.selectedAnswerIndex;
+          <div className="grid grid-cols-2 gap-3 p-5 sm:grid-cols-4 sm:p-6">
+            {[
+              {
+                label: "Accuracy",
+                value: `${accuracy}%`,
+                icon: Target,
+                color: "text-brand-300",
+              },
+              {
+                label: "Correct",
+                value: quiz.score,
+                icon: CheckCircle2,
+                color: "text-success",
+              },
+              {
+                label: "Incorrect",
+                value: incorrectCount,
+                icon: XCircle,
+                color: "text-danger",
+              },
+              {
+                label: "Unanswered",
+                value: unansweredCount,
+                icon: Clock3,
+                color: "text-warning",
+              },
+            ].map((stat) => {
+              const Icon = stat.icon;
 
               return (
-                <article
-                  key={question.id}
-                  className="rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:p-5"
+                <div
+                  key={stat.label}
+                  className="rounded-2xl border border-border-subtle bg-surface-raised p-4"
                 >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
-                        isCorrect
-                          ? "bg-success/10 text-success"
-                          : "bg-danger/10 text-danger"
-                      }`}
-                    >
-                      {isCorrect ? (
-                        <CheckCircle2 size={17} />
-                      ) : (
-                        <XCircle size={17} />
-                      )}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-xs text-text-muted">
-                          Question {index + 1}
-                        </p>
-
-                        <span
-                          className={`rounded-md px-2 py-1 text-[10px] font-semibold ${
-                            isCorrect
-                              ? "bg-success/10 text-success"
-                              : "bg-danger/10 text-danger"
-                          }`}
-                        >
-                          {isCorrect
-                            ? "Correct"
-                            : answer?.timedOut
-                              ? "Time expired"
-                              : "Incorrect"}
-                        </span>
-                      </div>
-
-                      <h3 className="mt-2 text-sm font-semibold leading-6 text-white">
-                        {question.question}
-                      </h3>
-
-                      <div className="mt-4 space-y-2 text-xs leading-5">
-                        <p className="text-text-secondary">
-                          Your answer:{" "}
-                          <span
-                            className={
-                              isCorrect
-                                ? "font-medium text-success"
-                                : "font-medium text-danger"
-                            }
-                          >
-                            {selectedAnswerIndex === null ||
-                            selectedAnswerIndex === undefined
-                              ? "Not answered"
-                              : question.options[selectedAnswerIndex]}
-                          </span>
-                        </p>
-
-                        {!isCorrect && (
-                          <p className="text-text-secondary">
-                            Correct answer:{" "}
-                            <span className="font-medium text-success">
-                              {question.options[question.correctAnswerIndex]}
-                            </span>
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="mt-4 rounded-xl border border-brand-400/10 bg-brand-500/5 p-3">
-                        <div className="flex items-start gap-2">
-                          <Lightbulb
-                            size={15}
-                            className="mt-0.5 shrink-0 text-brand-300"
-                          />
-
-                          <p className="text-xs leading-5 text-text-secondary">
-                            {question.explanation}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Icon size={16} className={stat.color} />
+                    <p className="text-xs text-text-muted">{stat.label}</p>
                   </div>
-                </article>
+
+                  <p className="display-font mt-3 text-2xl font-bold text-white">
+                    {stat.value}
+                  </p>
+                </div>
               );
             })}
+          </div>
 
-            <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-              <Button onClick={quiz.restartQuiz} className="flex-1">
+          <div className="space-y-5 px-5 pb-6 sm:px-6">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">Answer review</h2>
+                <p className="mt-1 text-xs leading-5 text-text-muted">
+                  Check your answers and learn why each correct answer is right.
+                </p>
+              </div>
+
+              <span className="text-xs text-text-secondary">
+                {reviewQuestions.length} of {quiz.totalQuestions} questions
+              </span>
+            </div>
+
+            <div
+              className="flex flex-wrap gap-2"
+              aria-label="Filter answer review"
+            >
+              {[
+                { id: "all", label: "All questions" },
+                { id: "incorrect", label: "Incorrect" },
+                { id: "unanswered", label: "Unanswered" },
+                { id: "correct", label: "Correct" },
+              ].map((filter) => (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() => setReviewFilter(filter.id)}
+                  aria-pressed={reviewFilter === filter.id}
+                  className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                    reviewFilter === filter.id
+                      ? "border-brand-400/40 bg-brand-500/15 text-brand-300"
+                      : "border-border-subtle bg-surface-raised text-text-secondary hover:border-brand-400/30 hover:text-white"
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+
+            {reviewQuestions.length === 0 ? (
+              <div className="rounded-2xl border border-border-subtle bg-surface-raised/50 px-5 py-10 text-center">
+                <CheckCircle2 size={28} className="mx-auto text-success" />
+
+                <h3 className="mt-3 text-sm font-bold text-white">
+                  No questions in this category
+                </h3>
+
+                <p className="mt-2 text-xs leading-5 text-text-secondary">
+                  Try another review filter to see your other answers.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {reviewQuestions.map(({ question, answer, index }) => {
+                  const isCorrect = Boolean(answer?.isCorrect);
+                  const selectedAnswerIndex = answer?.selectedAnswerIndex;
+                  const wasUnanswered = selectedAnswerIndex === null;
+
+                  return (
+                    <article
+                      key={question.id}
+                      className="rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:p-5"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                            isCorrect
+                              ? "bg-success/10 text-success"
+                              : wasUnanswered
+                                ? "bg-warning/10 text-warning"
+                                : "bg-danger/10 text-danger"
+                          }`}
+                        >
+                          {isCorrect ? (
+                            <CheckCircle2 size={18} />
+                          ) : wasUnanswered ? (
+                            <Clock3 size={18} />
+                          ) : (
+                            <XCircle size={18} />
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs text-text-muted">
+                              Question {index + 1}
+                            </p>
+
+                            <span
+                              className={`rounded-md px-2 py-1 text-[10px] font-semibold ${
+                                isCorrect
+                                  ? "bg-success/10 text-success"
+                                  : wasUnanswered
+                                    ? "bg-warning/10 text-warning"
+                                    : "bg-danger/10 text-danger"
+                              }`}
+                            >
+                              {isCorrect
+                                ? "Correct"
+                                : answer?.timedOut
+                                  ? "Time expired"
+                                  : wasUnanswered
+                                    ? "Skipped"
+                                    : "Incorrect"}
+                            </span>
+                          </div>
+
+                          <h3 className="mt-2 text-sm font-semibold leading-6 text-white">
+                            {question.question}
+                          </h3>
+
+                          <div className="mt-4 space-y-3 text-xs leading-5">
+                            <div>
+                              <p className="text-text-muted">Your answer</p>
+                              <p
+                                className={`mt-1 font-medium ${
+                                  isCorrect
+                                    ? "text-success"
+                                    : wasUnanswered
+                                      ? "text-warning"
+                                      : "text-danger"
+                                }`}
+                              >
+                                {wasUnanswered
+                                  ? "Not answered"
+                                  : (question.options[selectedAnswerIndex] ??
+                                    "Not answered")}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-text-muted">Correct answer</p>
+                              <p className="mt-1 font-medium text-success">
+                                {question.options[question.correctAnswerIndex]}
+                              </p>
+                            </div>
+                          </div>
+
+                          {question.explanation && (
+                            <div className="mt-4 rounded-xl border border-brand-400/10 bg-brand-500/5 p-3">
+                              <div className="flex items-start gap-2">
+                                <Lightbulb
+                                  size={16}
+                                  className="mt-0.5 shrink-0 text-brand-300"
+                                />
+
+                                <div>
+                                  <p className="text-xs font-semibold text-white">
+                                    Explanation
+                                  </p>
+
+                                  <p className="mt-1 text-xs leading-5 text-text-secondary">
+                                    {question.explanation}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3 border-t border-border-subtle pt-5 sm:flex-row">
+              <Button
+                onClick={() => {
+                  setReviewFilter("all");
+                  quiz.restartQuiz();
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                className="flex-1"
+              >
                 <RotateCcw size={16} />
                 Try again
               </Button>
@@ -280,7 +403,7 @@ function QuizPage() {
           No questions available
         </h1>
 
-        <p className="mt-2 text-sm leading-6 text-text-secondary">
+        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-text-secondary">
           This category has no questions matching your selection. Choose another
           category or difficulty.
         </p>
@@ -389,9 +512,7 @@ function QuizPage() {
 
             {isTimerUrgent && (
               <p className="mt-2 text-right text-xs font-medium text-danger">
-                {quiz.timeLeft === 0
-                  ? "Time is up!"
-                  : "Hurry! Time is running out."}
+                Hurry! Time is running out.
               </p>
             )}
           </div>
@@ -422,10 +543,7 @@ function QuizPage() {
               const isCorrectOption =
                 isAnswerSelected &&
                 index === currentQuestion.correctAnswerIndex;
-
-              const isWrongSelected =
-                isSelected && index !== currentQuestion.correctAnswerIndex;
-
+              const isWrongSelected = isSelected && !isSelectedCorrect;
               const letters = ["A", "B", "C", "D"];
 
               let optionStyle =
@@ -445,10 +563,6 @@ function QuizPage() {
               } else if (isCorrectOption) {
                 optionStyle = "border-success/50 bg-success/10";
                 letterStyle = "border-success bg-success text-white";
-              } else if (isSelected) {
-                optionStyle =
-                  "border-brand-400 bg-brand-500/10 ring-1 ring-brand-400/30";
-                letterStyle = "border-brand-400 bg-brand-500 text-white";
               }
 
               return (
@@ -469,8 +583,6 @@ function QuizPage() {
                       <XCircle size={17} />
                     ) : isCorrectOption ? (
                       <CheckCircle2 size={17} />
-                    ) : isSelected ? (
-                      <Check size={17} />
                     ) : (
                       letters[index]
                     )}
