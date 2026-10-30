@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import {
   ArrowLeft,
@@ -20,6 +20,7 @@ import {
 import Button from "../components/ui/Button";
 import { getQuestionsForCategory } from "../data/questions";
 import useQuiz from "../hooks/useQuiz";
+import { shuffleArray } from "../utils/shuffle";
 
 const DEFAULT_SECONDS_PER_QUESTION = 20;
 
@@ -39,7 +40,7 @@ function QuizPage() {
     shuffleAnswers = false,
   } = location.state ?? {};
 
-  const questions = useMemo(() => {
+  const [questions] = useState(() => {
     const categoryQuestions = getQuestionsForCategory(categoryId, categoryName);
 
     const filteredQuestions =
@@ -52,23 +53,16 @@ function QuizPage() {
     const selectedQuestions = filteredQuestions
       .slice(0, questionCount)
       .map((question) => {
-        if (!shuffleAnswers || question.options.length < 2) return question;
+        if (!shuffleAnswers || question.options.length < 2) {
+          return question;
+        }
 
-        // Shuffle option entries so the correct answer can be remapped safely.
-        const shuffledOptions = question.options.map(
-          (option, originalIndex) => ({
+        const shuffledOptions = shuffleArray(
+          question.options.map((option, originalIndex) => ({
             option,
             originalIndex,
-          }),
+          })),
         );
-
-        for (let index = shuffledOptions.length - 1; index > 0; index -= 1) {
-          const randomIndex = Math.floor(Math.random() * (index + 1));
-          [shuffledOptions[index], shuffledOptions[randomIndex]] = [
-            shuffledOptions[randomIndex],
-            shuffledOptions[index],
-          ];
-        }
 
         return {
           ...question,
@@ -79,30 +73,20 @@ function QuizPage() {
         };
       });
 
-    if (!shuffleQuestions) return selectedQuestions;
-
-    // Fisher-Yates shuffle: shuffle a copy so the question bank is never mutated.
-    const shuffledQuestions = [...selectedQuestions];
-
-    for (let index = shuffledQuestions.length - 1; index > 0; index -= 1) {
-      const randomIndex = Math.floor(Math.random() * (index + 1));
-      [shuffledQuestions[index], shuffledQuestions[randomIndex]] = [
-        shuffledQuestions[randomIndex],
-        shuffledQuestions[index],
-      ];
-    }
-
-    return shuffledQuestions;
-  }, [
-    categoryId,
-    categoryName,
-    difficulty,
-    questionCount,
-    shuffleQuestions,
-    shuffleAnswers,
-  ]);
+    return shuffleQuestions
+      ? shuffleArray(selectedQuestions)
+      : selectedQuestions;
+  });
 
   const quiz = useQuiz(questions, timerDuration);
+  const {
+    status: quizStatus,
+    selectedAnswer: quizSelectedAnswer,
+    nextQuestion,
+    selectAnswer,
+    pauseQuiz,
+    resumeQuiz,
+  } = quiz;
   const currentQuestion = quiz.questions[quiz.currentIndex];
   const answeredCount = quiz.answers.filter(Boolean).length;
   const remainingCount = quiz.totalQuestions - answeredCount;
@@ -136,29 +120,29 @@ function QuizPage() {
       if (isTypingTarget) return;
 
       if (event.key.toLowerCase() === "p") {
-        if (quiz.status === "playing") {
+        if (quizStatus === "playing") {
           event.preventDefault();
-          quiz.pauseQuiz();
-        } else if (quiz.status === "paused") {
+          pauseQuiz();
+        } else if (quizStatus === "paused") {
           event.preventDefault();
-          quiz.resumeQuiz();
+          resumeQuiz();
         }
 
         return;
       }
 
-      if (quiz.status !== "playing") return;
+      if (quizStatus !== "playing") return;
 
       if (event.key === "Enter") {
-        if (quiz.selectedAnswer !== null) {
+        if (quizSelectedAnswer !== null) {
           event.preventDefault();
-          quiz.nextQuestion();
+          nextQuestion();
         }
 
         return;
       }
 
-      if (quiz.selectedAnswer !== null) return;
+      if (quizSelectedAnswer !== null) return;
 
       const key = event.key.toLowerCase();
 
@@ -178,7 +162,7 @@ function QuizPage() {
         answerIndex < (currentQuestion?.options.length ?? 0)
       ) {
         event.preventDefault();
-        quiz.selectAnswer(answerIndex);
+        selectAnswer(answerIndex);
       }
     }
 
@@ -188,12 +172,12 @@ function QuizPage() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [
-    quiz.status,
-    quiz.selectedAnswer,
-    quiz.nextQuestion,
-    quiz.selectAnswer,
-    quiz.pauseQuiz,
-    quiz.resumeQuiz,
+    quizStatus,
+    quizSelectedAnswer,
+    nextQuestion,
+    selectAnswer,
+    pauseQuiz,
+    resumeQuiz,
     currentQuestion,
   ]);
 
@@ -817,7 +801,9 @@ function QuizPage() {
                   key={`${currentQuestion.id}-${index}`}
                   type="button"
                   onClick={() => quiz.selectAnswer(index)}
-                  disabled={isAnswerSelected && !quiz.answers[quiz.currentIndex]}
+                  disabled={
+                    isAnswerSelected && !quiz.answers[quiz.currentIndex]
+                  }
                   aria-pressed={isSelected}
                   aria-label={`Option ${letters[index]}: ${option}`}
                   aria-describedby="quiz-question"
