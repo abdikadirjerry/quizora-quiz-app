@@ -817,7 +817,7 @@ function QuizPage() {
                   key={`${currentQuestion.id}-${index}`}
                   type="button"
                   onClick={() => quiz.selectAnswer(index)}
-                  disabled={isAnswerSelected}
+                  disabled={isAnswerSelected && !quiz.answers[quiz.currentIndex]}
                   aria-pressed={isSelected}
                   aria-label={`Option ${letters[index]}: ${option}`}
                   aria-describedby="quiz-question"
