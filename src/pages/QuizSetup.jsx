@@ -8,6 +8,7 @@ import {
   Flame,
   Layers3,
   Sparkles,
+  Shuffle,
   Target,
 } from "lucide-react";
 import Button from "../components/ui/Button";
@@ -28,6 +29,7 @@ function QuizSetup() {
 
   const [difficulty, setDifficulty] = useState("all");
   const [questionCount, setQuestionCount] = useState(4);
+  const [shuffleQuestions, setShuffleQuestions] = useState(false);
 
   const categoryQuestions = useMemo(
     () => getQuestionsForCategory(categoryId, categoryName),
@@ -74,6 +76,7 @@ function QuizSetup() {
         categoryName,
         difficulty,
         questionCount: selectedCount,
+        shuffleQuestions,
       },
     });
   }
@@ -229,6 +232,51 @@ function QuizSetup() {
                 another difficulty.
               </div>
             )}
+          </section>
+
+          <section>
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500/10 text-brand-300">
+                <Shuffle size={19} />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-white">
+                  Question order
+                </h2>
+                <p className="mt-1 text-xs text-text-secondary">
+                  Choose whether questions appear in their usual order or are
+                  shuffled.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={shuffleQuestions}
+              onClick={() => setShuffleQuestions((current) => !current)}
+              className={`flex w-full items-center justify-between gap-4 rounded-2xl border p-4 text-left transition ${
+                shuffleQuestions
+                  ? "border-brand-400 bg-brand-500/10 ring-1 ring-brand-400/20"
+                  : "border-border-subtle bg-surface-raised hover:border-brand-400/40"
+              }`}
+            >
+              <span>
+                <span className="block text-sm font-semibold text-white">
+                  Shuffle questions
+                </span>
+                <span className="mt-1 block text-xs leading-5 text-text-secondary">
+                  Randomize the question order for this quiz session.
+                </span>
+              </span>
+              <span
+                className={`relative h-6 w-11 shrink-0 rounded-full transition ${shuffleQuestions ? "bg-brand-500" : "bg-surface-overlay"}`}
+              >
+                <span
+                  className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all ${shuffleQuestions ? "left-6" : "left-1"}`}
+                />
+              </span>
+            </button>
           </section>
 
           <section className="grid gap-3 sm:grid-cols-2">

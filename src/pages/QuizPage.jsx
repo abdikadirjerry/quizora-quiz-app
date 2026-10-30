@@ -35,6 +35,7 @@ function QuizPage() {
     difficulty = "all",
     questionCount = 4,
     timerDuration = DEFAULT_SECONDS_PER_QUESTION,
+    shuffleQuestions = false,
   } = location.state ?? {};
 
   const questions = useMemo(() => {
@@ -47,8 +48,23 @@ function QuizPage() {
             (question) => question.difficulty === difficulty,
           );
 
-    return filteredQuestions.slice(0, questionCount);
-  }, [categoryId, categoryName, difficulty, questionCount]);
+    const selectedQuestions = filteredQuestions.slice(0, questionCount);
+
+    if (!shuffleQuestions) return selectedQuestions;
+
+    // Fisher-Yates shuffle: shuffle a copy so the question bank is never mutated.
+    const shuffledQuestions = [...selectedQuestions];
+
+    for (let index = shuffledQuestions.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(Math.random() * (index + 1));
+      [shuffledQuestions[index], shuffledQuestions[randomIndex]] = [
+        shuffledQuestions[randomIndex],
+        shuffledQuestions[index],
+      ];
+    }
+
+    return shuffledQuestions;
+  }, [categoryId, categoryName, difficulty, questionCount, shuffleQuestions]);
 
   const quiz = useQuiz(questions, timerDuration);
   const currentQuestion = quiz.questions[quiz.currentIndex];
