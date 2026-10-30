@@ -29,6 +29,7 @@ import {
   getQuizHistory,
   getQuizStatistics,
 } from "../utils/quizStorage";
+import QuizPerformanceChart from "../components/history/QuizPerformanceChart";
 
 const CATEGORY_LABELS = {
   "general-knowledge": "General Knowledge",
@@ -350,6 +351,8 @@ function HistoryPage() {
           </p>
         </article>
       </div>
+
+      <QuizPerformanceChart history={history} />
 
       <section className="surface-card overflow-hidden rounded-3xl">
         <div className="space-y-5 border-b border-border-subtle p-5 sm:p-6">
