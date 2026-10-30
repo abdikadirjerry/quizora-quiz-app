@@ -74,3 +74,43 @@ export function getQuizStatistics(history = getQuizHistory()) {
     bestAccuracy,
   };
 }
+
+export function exportQuizHistoryToCSV(history = getQuizHistory()) {
+  if (!history.length) {
+    return null;
+  }
+
+  const headers = [
+    "Date",
+    "Category",
+    "Difficulty",
+    "Score",
+    "Total Questions",
+    "Accuracy",
+  ];
+
+  const escapeCSV = (value) => {
+    let safeValue = String(value ?? "");
+
+    // Prevent spreadsheet formula injection.
+    if (/^[\s]*[=+\-@]/.test(safeValue)) {
+      safeValue = `'${safeValue}`;
+    }
+
+    return `"${safeValue.replace(/"/g, '""')}"`;
+  };
+
+  const rows = history.map((attempt) => [
+    attempt.completedAt,
+    attempt.category,
+    attempt.difficulty ?? "Mixed",
+    attempt.score,
+    attempt.totalQuestions,
+    `${Number(attempt.accuracy) || 0}%`,
+  ]);
+
+  return [
+    headers.map(escapeCSV).join(","),
+    ...rows.map((row) => row.map(escapeCSV).join(",")),
+  ].join("\r\n");
+}

@@ -15,12 +15,14 @@ import {
   Trash2,
   Trophy,
   X,
+  Download,
 } from "lucide-react";
 import Button from "../components/ui/Button";
 import PageHeader from "../components/ui/PageHeader";
 import {
   clearQuizHistory,
   deleteQuizAttempt,
+  exportQuizHistoryToCSV,
   getQuizHistory,
   getQuizStatistics,
 } from "../utils/quizStorage";
@@ -151,6 +153,28 @@ function HistoryPage() {
     setAttemptToDelete(null);
   }
 
+  function handleExportHistory() {
+    const csv = exportQuizHistoryToCSV(history);
+
+    if (!csv) return;
+
+    const blob = new Blob(["\uFEFF", csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `quizora-history-${new Date().toISOString().slice(0, 10)}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+  }
+
   const statCards = [
     {
       label: "Quizzes completed",
@@ -190,13 +214,20 @@ function HistoryPage() {
         description="Review your attempts, track your accuracy, and see how far you've come."
         action={
           history.length > 0 ? (
-            <Button
-              variant="secondary"
-              onClick={() => setShowClearConfirmation(true)}
-            >
-              <Trash2 size={15} />
-              Clear history
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={handleExportHistory}>
+                <Download size={15} />
+                Export CSV
+              </Button>
+
+              <Button
+                variant="secondary"
+                onClick={() => setShowClearConfirmation(true)}
+              >
+                <Trash2 size={15} />
+                Clear history
+              </Button>
+            </div>
           ) : null
         }
       />
