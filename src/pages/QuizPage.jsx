@@ -36,6 +36,7 @@ function QuizPage() {
     questionCount = 4,
     timerDuration = DEFAULT_SECONDS_PER_QUESTION,
     shuffleQuestions = false,
+    shuffleAnswers = false,
   } = location.state ?? {};
 
   const questions = useMemo(() => {
@@ -48,7 +49,35 @@ function QuizPage() {
             (question) => question.difficulty === difficulty,
           );
 
-    const selectedQuestions = filteredQuestions.slice(0, questionCount);
+    const selectedQuestions = filteredQuestions
+      .slice(0, questionCount)
+      .map((question) => {
+        if (!shuffleAnswers || question.options.length < 2) return question;
+
+        // Shuffle option entries so the correct answer can be remapped safely.
+        const shuffledOptions = question.options.map(
+          (option, originalIndex) => ({
+            option,
+            originalIndex,
+          }),
+        );
+
+        for (let index = shuffledOptions.length - 1; index > 0; index -= 1) {
+          const randomIndex = Math.floor(Math.random() * (index + 1));
+          [shuffledOptions[index], shuffledOptions[randomIndex]] = [
+            shuffledOptions[randomIndex],
+            shuffledOptions[index],
+          ];
+        }
+
+        return {
+          ...question,
+          options: shuffledOptions.map((entry) => entry.option),
+          correctAnswerIndex: shuffledOptions.findIndex(
+            (entry) => entry.originalIndex === question.correctAnswerIndex,
+          ),
+        };
+      });
 
     if (!shuffleQuestions) return selectedQuestions;
 
@@ -64,7 +93,14 @@ function QuizPage() {
     }
 
     return shuffledQuestions;
-  }, [categoryId, categoryName, difficulty, questionCount, shuffleQuestions]);
+  }, [
+    categoryId,
+    categoryName,
+    difficulty,
+    questionCount,
+    shuffleQuestions,
+    shuffleAnswers,
+  ]);
 
   const quiz = useQuiz(questions, timerDuration);
   const currentQuestion = quiz.questions[quiz.currentIndex];
