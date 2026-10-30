@@ -20,6 +20,7 @@ import Button from "../components/ui/Button";
 import PageHeader from "../components/ui/PageHeader";
 import {
   clearQuizHistory,
+  deleteQuizAttempt,
   getQuizHistory,
   getQuizStatistics,
 } from "../utils/quizStorage";
@@ -67,6 +68,7 @@ function HistoryPage() {
   const [sortBy, setSortBy] = useState("recent");
   const [showFilters, setShowFilters] = useState(false);
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
+  const [attemptToDelete, setAttemptToDelete] = useState(null);
 
   const statistics = getQuizStatistics(history);
 
@@ -140,6 +142,13 @@ function HistoryPage() {
     setHistory([]);
     setShowClearConfirmation(false);
     resetFilters();
+  }
+
+  function handleDeleteAttempt(attemptId) {
+    const updatedHistory = deleteQuizAttempt(attemptId);
+
+    setHistory(updatedHistory);
+    setAttemptToDelete(null);
   }
 
   const statCards = [
@@ -440,61 +449,98 @@ function HistoryPage() {
               const score = Number(attempt.score) || 0;
 
               return (
-                <Link
-                  to={`/history/${encodeURIComponent(attempt.id)}`}
+                <article
                   key={attempt.id}
-                  className="flex flex-col gap-4 p-5 transition hover:bg-surface-raised/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 sm:flex-row sm:items-center sm:p-6"
-                  aria-label={`Review ${getCategoryName(attempt.category)} quiz attempt`}
+                  className="flex flex-col gap-4 p-5 transition hover:bg-surface-raised/50 sm:flex-row sm:items-center sm:p-6"
                 >
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-brand-400/20 bg-brand-500/10 text-brand-300">
-                    <BarChart3 size={21} />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-sm font-bold text-white">
-                      {getCategoryName(attempt.category)}
-                    </h3>
-
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-text-secondary">
-                      <span className="inline-flex items-center gap-1.5">
-                        <CalendarDays size={13} />
-                        {formatDate(attempt.completedAt)}
-                      </span>
-
-                      <span className="inline-flex items-center gap-1.5">
-                        <Clock3 size={13} />
-                        {attempt.difficulty ?? "Mixed"}
-                      </span>
-
-                      <span>
-                        {totalQuestions}{" "}
-                        {totalQuestions === 1 ? "question" : "questions"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-5 sm:justify-end">
-                    <div className="min-w-20">
-                      <p className="display-font text-xl font-bold text-white">
-                        {score}/{totalQuestions}
-                      </p>
-
-                      <p className="mt-1 text-xs text-text-muted">
-                        Correct answers
-                      </p>
+                  <Link
+                    to={`/history/${encodeURIComponent(attempt.id)}`}
+                    className="flex min-w-0 flex-1 items-center gap-4"
+                    aria-label={`Review ${getCategoryName(attempt.category)} quiz attempt`}
+                  >
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-brand-400/20 bg-brand-500/10 text-brand-300">
+                      <BarChart3 size={21} />
                     </div>
 
-                    <div className="min-w-16 text-right">
-                      <p
-                        className={`text-lg font-bold ${getAccuracyColor(accuracy)}`}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-sm font-bold text-white">
+                        {getCategoryName(attempt.category)}
+                      </h3>
+
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-text-secondary">
+                        <span className="inline-flex items-center gap-1.5">
+                          <CalendarDays size={13} />
+                          {formatDate(attempt.completedAt)}
+                        </span>
+
+                        <span className="inline-flex items-center gap-1.5">
+                          <Clock3 size={13} />
+                          {attempt.difficulty ?? "Mixed"}
+                        </span>
+
+                        <span>
+                          {totalQuestions}{" "}
+                          {totalQuestions === 1 ? "question" : "questions"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-5">
+                      <div className="min-w-20">
+                        <p className="display-font text-xl font-bold text-white">
+                          {score}/{totalQuestions}
+                        </p>
+                        <p className="mt-1 text-xs text-text-muted">
+                          Correct answers
+                        </p>
+                      </div>
+
+                      <div className="min-w-16 text-right">
+                        <p
+                          className={`text-lg font-bold ${getAccuracyColor(accuracy)}`}
+                        >
+                          {accuracy}%
+                        </p>
+                        <p className="mt-1 text-xs text-text-muted">Accuracy</p>
+                      </div>
+                    </div>
+                  </Link>
+
+                  <div className="flex items-center gap-2 sm:ml-2">
+                    {attemptToDelete === attempt.id ? (
+                      <>
+                        <span className="text-xs text-text-secondary">
+                          Delete this attempt?
+                        </span>
+
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleDeleteAttempt(attempt.id)}
+                        >
+                          Confirm
+                        </Button>
+
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setAttemptToDelete(null)}
+                        >
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setAttemptToDelete(attempt.id)}
+                        aria-label={`Delete ${getCategoryName(attempt.category)} attempt`}
                       >
-                        {accuracy}%
-                      </p>
-
-                      <p className="mt-1 text-xs text-text-muted">Accuracy</p>
-                    </div>
+                        <Trash2 size={15} />
+                      </Button>
+                    )}
                   </div>
-                </Link>
+                </article>
               );
             })}
           </div>

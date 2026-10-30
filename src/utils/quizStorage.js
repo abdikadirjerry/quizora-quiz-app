@@ -35,6 +35,16 @@ export function clearQuizHistory() {
   localStorage.removeItem(HISTORY_KEY);
 }
 
+export function deleteQuizAttempt(attemptId) {
+  const history = getQuizHistory();
+
+  const updatedHistory = history.filter((attempt) => attempt.id !== attemptId);
+
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(updatedHistory));
+
+  return updatedHistory;
+}
+
 export function getQuizStatistics(history = getQuizHistory()) {
   const totalQuizzes = history.length;
 
