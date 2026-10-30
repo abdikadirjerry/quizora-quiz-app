@@ -7,15 +7,18 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
+  Download,
   Filter,
   History,
+  Minus,
   RotateCcw,
   Search,
   Target,
   Trash2,
+  TrendingDown,
+  TrendingUp,
   Trophy,
   X,
-  Download,
 } from "lucide-react";
 import Button from "../components/ui/Button";
 import PageHeader from "../components/ui/PageHeader";
@@ -206,6 +209,31 @@ function HistoryPage() {
     },
   ];
 
+  const improvement = statistics.improvement;
+
+  const improvementIcon =
+    improvement === null
+      ? Minus
+      : improvement > 0
+        ? TrendingUp
+        : improvement < 0
+          ? TrendingDown
+          : Minus;
+
+  const ImprovementIcon = improvementIcon;
+
+  const improvementColor =
+    improvement === null
+      ? "text-text-secondary"
+      : improvement > 0
+        ? "text-success"
+        : improvement < 0
+          ? "text-danger"
+          : "text-text-secondary";
+
+  const improvementValue =
+    improvement === null ? "—" : `${improvement > 0 ? "+" : ""}${improvement}%`;
+
   return (
     <section className="space-y-8">
       <PageHeader
@@ -273,7 +301,7 @@ function HistoryPage() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {statCards.map((stat) => {
           const Icon = stat.icon;
 
@@ -297,6 +325,30 @@ function HistoryPage() {
             </article>
           );
         })}
+
+        <article className="surface-card rounded-2xl p-5">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-medium text-text-secondary">
+              Recent improvement
+            </span>
+
+            <span
+              className={`flex h-10 w-10 items-center justify-center rounded-xl bg-surface-raised ${improvementColor}`}
+            >
+              <ImprovementIcon size={19} />
+            </span>
+          </div>
+
+          <p
+            className={`display-font mt-5 text-3xl font-bold tracking-tight ${improvementColor}`}
+          >
+            {improvementValue}
+          </p>
+
+          <p className="mt-2 text-xs leading-5 text-text-secondary">
+            Compared with your previous quiz
+          </p>
+        </article>
       </div>
 
       <section className="surface-card overflow-hidden rounded-3xl">

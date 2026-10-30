@@ -66,12 +66,23 @@ export function getQuizStatistics(history = getQuizHistory()) {
       ? Math.max(...history.map((attempt) => Number(attempt.accuracy) || 0))
       : 0;
 
+  // Compare the two most recent quiz attempts.
+  const latestAttempt = history[0];
+  const previousAttempt = history[1];
+
+  const latestAccuracy = Number(latestAttempt?.accuracy) || 0;
+  const previousAccuracy = Number(previousAttempt?.accuracy) || 0;
+
+  const improvement =
+    previousAttempt && latestAttempt ? latestAccuracy - previousAccuracy : null;
+
   return {
     totalQuizzes,
     totalQuestions,
     totalCorrect,
     averageAccuracy,
     bestAccuracy,
+    improvement,
   };
 }
 
