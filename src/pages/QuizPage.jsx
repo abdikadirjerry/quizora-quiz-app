@@ -104,6 +104,8 @@ function QuizPage() {
 
   const quiz = useQuiz(questions, timerDuration);
   const currentQuestion = quiz.questions[quiz.currentIndex];
+  const answeredCount = quiz.answers.filter(Boolean).length;
+  const remainingCount = quiz.totalQuestions - answeredCount;
 
   useEffect(() => {
     if (quiz.status !== "playing" && quiz.status !== "paused") {
@@ -213,7 +215,7 @@ function QuizPage() {
 
   if (quiz.status === "completed") {
     const unansweredCount = quiz.answers.filter(
-      (answer) => answer.selectedAnswerIndex === null,
+      (answer) => answer?.selectedAnswerIndex === null,
     ).length;
 
     const incorrectCount = quiz.totalQuestions - quiz.score - unansweredCount;
@@ -647,10 +649,7 @@ function QuizPage() {
               </span>
 
               <span className="font-semibold text-brand-300">
-                {Math.round(
-                  ((quiz.currentIndex + 1) / quiz.totalQuestions) * 100,
-                )}
-                %
+                {Math.round((answeredCount / quiz.totalQuestions) * 100)}%
               </span>
             </div>
 
@@ -660,14 +659,12 @@ function QuizPage() {
               aria-label="Quiz progress"
               aria-valuemin={0}
               aria-valuemax={quiz.totalQuestions}
-              aria-valuenow={quiz.currentIndex + 1}
+              aria-valuenow={answeredCount}
             >
               <div
                 className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-300 transition-all duration-300"
                 style={{
-                  width: `${
-                    ((quiz.currentIndex + 1) / quiz.totalQuestions) * 100
-                  }%`,
+                  width: `${(answeredCount / quiz.totalQuestions) * 100}%`,
                 }}
               />
             </div>
@@ -689,6 +686,76 @@ function QuizPage() {
               </p>
             )}
           </div>
+        </div>
+
+        <div className="border-b border-border-subtle px-5 py-4 sm:px-8">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-bold text-white">
+                Question navigator
+              </h2>
+              <p className="mt-1 text-xs text-text-secondary">
+                {answeredCount} of {quiz.totalQuestions} answered ·{" "}
+                {remainingCount} remaining
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-[10px] text-text-muted">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-success" />
+                Answered
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full border border-border-subtle" />
+                Unanswered
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-brand-400" />
+                Current
+              </span>
+            </div>
+          </div>
+          <div
+            className="grid grid-cols-5 gap-2 sm:grid-cols-8 md:grid-cols-10"
+            aria-label="Jump to a question"
+          >
+            {quiz.questions.map((question, index) => {
+              const answer = quiz.answers[index];
+              const isCurrent = index === quiz.currentIndex;
+              const isAnswered = Boolean(answer);
+              return (
+                <button
+                  key={question.id}
+                  type="button"
+                  onClick={() => quiz.jumpToQuestion(index)}
+                  disabled={quiz.status !== "playing" || isCurrent}
+                  aria-current={isCurrent ? "step" : undefined}
+                  aria-label={`Question ${index + 1}, ${isCurrent ? "current question" : isAnswered ? "answered" : "unanswered"}`}
+                  className={`relative flex h-10 items-center justify-center rounded-xl border text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 disabled:cursor-default ${
+                    isCurrent
+                      ? "border-brand-400 bg-brand-500 text-white shadow-lg shadow-brand-500/20"
+                      : isAnswered
+                        ? "border-success/30 bg-success/10 text-success hover:border-success/60"
+                        : "border-border-subtle bg-surface-raised text-text-secondary hover:border-brand-400/40 hover:text-white"
+                  }`}
+                >
+                  {index + 1}
+                  {isAnswered && !isCurrent && (
+                    <Check
+                      size={12}
+                      className="absolute right-1 top-1"
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          {remainingCount > 0 && (
+            <p className="mt-3 text-xs leading-5 text-text-muted">
+              You can jump between questions. Unanswered questions are marked so
+              you can return to them before finishing.
+            </p>
+          )}
         </div>
 
         <div className="p-5 sm:p-8">
