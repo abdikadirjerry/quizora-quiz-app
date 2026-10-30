@@ -306,6 +306,7 @@ export default function useQuiz(
           totalQuestions > 0
             ? Math.round((correctAnswers / totalQuestions) * 100)
             : 0,
+        questions: state.questions,
         answers: state.answers,
       });
     } catch (error) {

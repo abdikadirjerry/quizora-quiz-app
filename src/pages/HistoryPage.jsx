@@ -440,9 +440,11 @@ function HistoryPage() {
               const score = Number(attempt.score) || 0;
 
               return (
-                <article
+                <Link
+                  to={`/history/${encodeURIComponent(attempt.id)}`}
                   key={attempt.id}
-                  className="flex flex-col gap-4 p-5 transition hover:bg-surface-raised/50 sm:flex-row sm:items-center sm:p-6"
+                  className="flex flex-col gap-4 p-5 transition hover:bg-surface-raised/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 sm:flex-row sm:items-center sm:p-6"
+                  aria-label={`Review ${getCategoryName(attempt.category)} quiz attempt`}
                 >
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-brand-400/20 bg-brand-500/10 text-brand-300">
                     <BarChart3 size={21} />
@@ -492,7 +494,7 @@ function HistoryPage() {
                       <p className="mt-1 text-xs text-text-muted">Accuracy</p>
                     </div>
                   </div>
-                </article>
+                </Link>
               );
             })}
           </div>

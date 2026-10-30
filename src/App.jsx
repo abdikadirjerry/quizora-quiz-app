@@ -7,6 +7,7 @@ import LeaderboardPage from "./pages/LeaderboardPage";
 import NotFound from "./pages/NotFound";
 import QuizPage from "./pages/QuizPage";
 import QuizSetup from "./pages/QuizSetup";
+import QuizReviewPage from "./pages/QuizReviewPage";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           <Route path="quiz/play" element={<QuizPage />} />
           <Route path="history" element={<HistoryPage />} />
           <Route path="leaderboard" element={<LeaderboardPage />} />
+          <Route path="history/:attemptId" element={<QuizReviewPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
