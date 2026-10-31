@@ -75,7 +75,9 @@ function HistoryPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
   const [attemptToDelete, setAttemptToDelete] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
+  const ATTEMPTS_PER_PAGE = 10;
   const statistics = getQuizStatistics(history);
 
   const categories = useMemo(
@@ -130,6 +132,17 @@ function HistoryPage() {
     });
   }, [history, searchQuery, categoryFilter, difficultyFilter, sortBy]);
 
+  const totalPages = Math.ceil(filteredHistory.length / ATTEMPTS_PER_PAGE);
+
+  const safeCurrentPage = Math.min(currentPage, Math.max(totalPages, 1));
+
+  const startIndex = (safeCurrentPage - 1) * ATTEMPTS_PER_PAGE;
+
+  const paginatedHistory = filteredHistory.slice(
+    startIndex,
+    startIndex + ATTEMPTS_PER_PAGE,
+  );
+
   const hasActiveFilters =
     searchQuery.trim() !== "" ||
     categoryFilter !== "all" ||
@@ -141,6 +154,7 @@ function HistoryPage() {
     setCategoryFilter("all");
     setDifficultyFilter("all");
     setSortBy("recent");
+    setCurrentPage(1);
   }
 
   function handleClearHistory() {
@@ -383,7 +397,10 @@ function HistoryPage() {
                   <input
                     type="search"
                     value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
+                    onChange={(event) => {
+                      setSearchQuery(event.target.value);
+                      setCurrentPage(1);
+                    }}
                     placeholder="Search quiz categories..."
                     aria-label="Search quiz history"
                     className="w-full rounded-xl border border-border-subtle bg-surface-raised py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-text-muted focus:border-brand-400"
@@ -415,9 +432,10 @@ function HistoryPage() {
 
                     <select
                       value={categoryFilter}
-                      onChange={(event) =>
-                        setCategoryFilter(event.target.value)
-                      }
+                      onChange={(event) => {
+                        setCategoryFilter(event.target.value);
+                        setCurrentPage(1);
+                      }}
                       className="w-full rounded-xl border border-border-subtle bg-surface-raised px-3 py-3 text-sm text-white outline-none focus:border-brand-400"
                     >
                       <option value="all">All categories</option>
@@ -437,9 +455,10 @@ function HistoryPage() {
 
                     <select
                       value={difficultyFilter}
-                      onChange={(event) =>
-                        setDifficultyFilter(event.target.value)
-                      }
+                      onChange={(event) => {
+                        setDifficultyFilter(event.target.value);
+                        setCurrentPage(1);
+                      }}
                       className="w-full rounded-xl border border-border-subtle bg-surface-raised px-3 py-3 text-sm text-white outline-none focus:border-brand-400"
                     >
                       <option value="all">All difficulties</option>
@@ -460,7 +479,10 @@ function HistoryPage() {
 
                   <select
                     value={sortBy}
-                    onChange={(event) => setSortBy(event.target.value)}
+                    onChange={(event) => {
+                      setSortBy(event.target.value);
+                      setCurrentPage(1);
+                    }}
                     aria-label="Sort quiz history"
                     className="rounded-lg border border-border-subtle bg-surface-raised px-3 py-2 text-xs font-medium text-white outline-none focus:border-brand-400"
                   >
@@ -529,7 +551,7 @@ function HistoryPage() {
           </div>
         ) : (
           <div className="divide-y divide-border-subtle">
-            {filteredHistory.map((attempt) => {
+            {paginatedHistory.map((attempt) => {
               const accuracy = Number(attempt.accuracy) || 0;
               const totalQuestions = Number(attempt.totalQuestions) || 0;
               const score = Number(attempt.score) || 0;
@@ -630,6 +652,57 @@ function HistoryPage() {
               );
             })}
           </div>
+        )}
+        {totalPages > 1 && (
+          <nav
+            aria-label="Quiz history pagination"
+            className="flex flex-col gap-3 border-t border-border-subtle p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+          >
+            <p className="text-xs text-text-secondary">
+              Showing {startIndex + 1}–
+              {Math.min(startIndex + ATTEMPTS_PER_PAGE, filteredHistory.length)}{" "}
+              of {filteredHistory.length} attempts
+            </p>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={safeCurrentPage === 1}
+                onClick={() => setCurrentPage(safeCurrentPage - 1)}
+              >
+                Previous
+              </Button>
+
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+                (page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    aria-label={`Go to page ${page}`}
+                    aria-current={safeCurrentPage === page ? "page" : undefined}
+                    onClick={() => setCurrentPage(page)}
+                    className={`flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition ${
+                      safeCurrentPage === page
+                        ? "bg-brand-500 text-white"
+                        : "border border-border-subtle bg-surface-raised text-text-secondary hover:text-white"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ),
+              )}
+
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={safeCurrentPage === totalPages}
+                onClick={() => setCurrentPage(safeCurrentPage + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </nav>
         )}
       </section>
 
