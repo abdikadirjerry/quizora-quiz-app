@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import {
   ArrowDownWideNarrow,
   ArrowRight,
@@ -75,7 +75,13 @@ function HistoryPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
   const [attemptToDelete, setAttemptToDelete] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const requestedPage = Number(searchParams.get("page"));
+
+  const initialPage =
+    Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
 
   const ATTEMPTS_PER_PAGE = 10;
   const statistics = getQuizStatistics(history);
@@ -148,6 +154,16 @@ function HistoryPage() {
     categoryFilter !== "all" ||
     difficultyFilter !== "all" ||
     sortBy !== "recent";
+
+  function navigateToPage(page) {
+    setCurrentPage(page);
+
+    if (page === 1) {
+      setSearchParams({});
+    } else {
+      setSearchParams({ page: String(page) });
+    }
+  }
 
   function resetFilters() {
     setSearchQuery("");
@@ -563,6 +579,7 @@ function HistoryPage() {
                 >
                   <Link
                     to={`/history/${encodeURIComponent(attempt.id)}`}
+                    state={{ fromHistoryPage: safeCurrentPage }}
                     className="flex min-w-0 flex-1 items-center gap-4"
                     aria-label={`Review ${getCategoryName(attempt.category)} quiz attempt`}
                   >
@@ -669,7 +686,7 @@ function HistoryPage() {
                 variant="secondary"
                 size="sm"
                 disabled={safeCurrentPage === 1}
-                onClick={() => setCurrentPage(safeCurrentPage - 1)}
+                onClick={() => navigateToPage(safeCurrentPage - 1)}
               >
                 Previous
               </Button>
@@ -681,7 +698,7 @@ function HistoryPage() {
                     type="button"
                     aria-label={`Go to page ${page}`}
                     aria-current={safeCurrentPage === page ? "page" : undefined}
-                    onClick={() => setCurrentPage(page)}
+                    onClick={() => navigateToPage(page)}
                     className={`flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition ${
                       safeCurrentPage === page
                         ? "bg-brand-500 text-white"
@@ -697,7 +714,7 @@ function HistoryPage() {
                 variant="secondary"
                 size="sm"
                 disabled={safeCurrentPage === totalPages}
-                onClick={() => setCurrentPage(safeCurrentPage + 1)}
+                onClick={() => navigateToPage(safeCurrentPage + 1)}
               >
                 Next
               </Button>

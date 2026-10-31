@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router";
+import { Link, useLocation, useParams } from "react-router";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -23,6 +23,14 @@ const CATEGORY_LABELS = {
 
 function QuizReviewPage() {
   const { attemptId } = useParams();
+  const location = useLocation();
+
+  const historyPage = location.state?.fromHistoryPage;
+
+  const historyUrl =
+    Number.isInteger(historyPage) && historyPage > 1
+      ? `/history?page=${historyPage}`
+      : "/history";
 
   const attempt = getQuizHistory().find((item) => item.id === attemptId);
 
@@ -35,7 +43,7 @@ function QuizReviewPage() {
           description="This quiz attempt may have been deleted."
         />
 
-        <Link to="/history">
+        <Link to={historyUrl}>
           <Button variant="secondary">
             <ArrowLeft size={15} />
             Back to history
@@ -62,7 +70,7 @@ function QuizReviewPage() {
   return (
     <section className="space-y-8">
       <Link
-        to="/history"
+        to={historyUrl}
         className="inline-flex items-center gap-2 text-sm text-text-secondary transition hover:text-white"
       >
         <ArrowLeft size={16} />
@@ -211,7 +219,7 @@ function QuizReviewPage() {
         })}
       </div>
 
-      <Link to="/history">
+      <Link to={historyUrl}>
         <Button variant="secondary">
           <ArrowLeft size={15} />
           Back to history
