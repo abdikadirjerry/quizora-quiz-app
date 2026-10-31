@@ -67,6 +67,13 @@ function getAttemptDate(attempt) {
 }
 
 function HistoryPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const requestedPage = Number(searchParams.get("page"));
+
+  const initialPage =
+    Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+
   const [history, setHistory] = useState(() => getQuizHistory());
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -76,12 +83,6 @@ function HistoryPage() {
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
   const [attemptToDelete, setAttemptToDelete] = useState(null);
   const [currentPage, setCurrentPage] = useState(initialPage);
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const requestedPage = Number(searchParams.get("page"));
-
-  const initialPage =
-    Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
 
   const ATTEMPTS_PER_PAGE = 10;
   const statistics = getQuizStatistics(history);
