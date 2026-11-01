@@ -253,25 +253,22 @@ function QuizReviewPage() {
               key={question.id ?? index}
               className="surface-card scroll-mt-6 space-y-5 rounded-2xl p-5 sm:p-6"
             >
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <span className="text-xs font-semibold text-text-secondary">
                   QUESTION {index + 1} OF {questions.length}
                 </span>
 
-                {isCorrect ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-success">
-                    <CheckCircle2 size={15} />
-                    Correct
-                  </span>
-                ) : skipped ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-warning">
-                    <SkipForward size={15} />
-                    {timedOut ? "Timed out" : "Skipped"}
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-danger">
-                    <XCircle size={15} />
-                    Incorrect
+                {question.difficulty && (
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                      question.difficulty === "Easy"
+                        ? "border-success/30 bg-success/10 text-success"
+                        : question.difficulty === "Medium"
+                          ? "border-warning/30 bg-warning/10 text-warning"
+                          : "border-danger/30 bg-danger/10 text-danger"
+                    }`}
+                  >
+                    {question.difficulty}
                   </span>
                 )}
               </div>
