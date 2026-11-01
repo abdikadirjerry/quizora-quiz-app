@@ -246,6 +246,23 @@ function QuizReviewPage() {
           Back to history
         </Button>
       </Link>
+
+      <Button
+        variant="secondary"
+        onClick={() =>
+          navigate("/quiz", {
+            state: {
+              categoryId: attempt.category,
+              categoryName:
+                CATEGORY_LABELS[attempt.category] ??
+                attempt.category ??
+                "General Knowledge",
+            },
+          })
+        }
+      >
+        Try another challenge
+      </Button>
     </section>
   );
 }
