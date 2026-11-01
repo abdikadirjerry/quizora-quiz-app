@@ -138,6 +138,47 @@ function QuizReviewPage() {
           </p>
         </div>
 
+        <div
+          className="flex flex-wrap gap-3"
+          aria-label="Navigate to a question"
+        >
+          {questions.map((question, index) => {
+            const answer = answers[index];
+            const selectedIndex = answer?.selectedAnswerIndex;
+            const skipped = answer?.skipped || selectedIndex == null;
+            const isCorrect = !skipped && answer?.isCorrect === true;
+
+            let statusStyle =
+              "border-danger/40 bg-danger/10 text-danger hover:bg-danger/20";
+
+            if (isCorrect) {
+              statusStyle =
+                "border-success/40 bg-success/10 text-success hover:bg-success/20";
+            } else if (skipped) {
+              statusStyle =
+                "border-warning/40 bg-warning/10 text-warning hover:bg-warning/20";
+            }
+
+            return (
+              <button
+                key={question?.id ?? index}
+                type="button"
+                aria-label={`Go to question ${index + 1}: ${
+                  isCorrect ? "correct" : skipped ? "skipped" : "incorrect"
+                }`}
+                onClick={() =>
+                  document
+                    .getElementById(`question-${index + 1}`)
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+                className={`flex h-11 w-11 items-center justify-center rounded-xl border text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-info ${statusStyle}`}
+              >
+                {index + 1}
+              </button>
+            );
+          })}
+        </div>
+
         {questions.map((question, index) => {
           const answer = answers[index];
 
@@ -164,8 +205,9 @@ function QuizReviewPage() {
 
           return (
             <article
+              id={`question-${index + 1}`}
               key={question.id ?? index}
-              className="surface-card space-y-5 rounded-2xl p-5 sm:p-6"
+              className="surface-card scroll-mt-6 space-y-5 rounded-2xl p-5 sm:p-6"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="text-xs font-semibold text-text-secondary">
