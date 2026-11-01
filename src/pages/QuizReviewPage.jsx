@@ -88,6 +88,28 @@ function QuizReviewPage() {
       answer?.selectedAnswerIndex != null,
   ).length;
 
+  const difficultyStats = ["Easy", "Medium", "Hard"].map((difficulty) => {
+    const difficultyQuestions = questions
+      .map((question, index) => ({
+        question,
+        answer: answers[index],
+      }))
+      .filter((item) => item.question?.difficulty === difficulty);
+
+    const correct = difficultyQuestions.filter(
+      ({ answer }) =>
+        answer?.isCorrect === true &&
+        !answer?.skipped &&
+        answer?.selectedAnswerIndex != null,
+    ).length;
+
+    return {
+      difficulty,
+      correct,
+      total: difficultyQuestions.length,
+    };
+  });
+
   const skippedCount = answers.filter(
     (answer) => answer?.skipped || answer?.selectedAnswerIndex == null,
   ).length;
@@ -164,6 +186,65 @@ function QuizReviewPage() {
             <p className="text-2xl font-bold text-warning">{skippedCount}</p>
             <p className="mt-1 text-xs text-text-secondary">Skipped</p>
           </div>
+        </div>
+      </article>
+
+      <article className="surface-card space-y-4 rounded-2xl p-5">
+        <div>
+          <h2 className="text-lg font-bold text-white">
+            Performance by difficulty
+          </h2>
+          <p className="mt-1 text-sm text-text-secondary">
+            See how well you performed at each difficulty level.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {difficultyStats
+            .filter((item) => item.total > 0)
+            .map(({ difficulty, correct, total }) => {
+              const percentage = Math.round((correct / total) * 100);
+
+              const barColor =
+                difficulty === "Easy"
+                  ? "bg-success"
+                  : difficulty === "Medium"
+                    ? "bg-warning"
+                    : "bg-danger";
+
+              return (
+                <div key={difficulty} className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-semibold text-white">
+                      {difficulty}
+                    </span>
+                    <span className="text-sm text-text-secondary">
+                      {correct}/{total} correct
+                    </span>
+                  </div>
+
+                  <div
+                    className="h-2 overflow-hidden rounded-full bg-surface-raised"
+                    role="progressbar"
+                    aria-label={`${difficulty} accuracy`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={percentage}
+                  >
+                    <div
+                      className={`h-full rounded-full transition-all ${barColor}`}
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+
+          {difficultyStats.every((item) => item.total === 0) && (
+            <p className="text-sm text-text-secondary">
+              Difficulty statistics are unavailable for this attempt.
+            </p>
+          )}
         </div>
       </article>
 
