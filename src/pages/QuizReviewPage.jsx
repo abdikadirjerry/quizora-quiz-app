@@ -88,6 +88,24 @@ function QuizReviewPage() {
   const totalQuestions = Number(attempt.totalQuestions) || questions.length;
   const accuracy = Number(attempt.accuracy) || 0;
 
+  const correctCount = answers.filter(
+    (answer) =>
+      answer?.isCorrect === true &&
+      !answer?.skipped &&
+      answer?.selectedAnswerIndex != null,
+  ).length;
+
+  const skippedCount = answers.filter(
+    (answer) => answer?.skipped || answer?.selectedAnswerIndex == null,
+  ).length;
+
+  const incorrectCount = answers.filter(
+    (answer) =>
+      answer?.isCorrect === false &&
+      !answer?.skipped &&
+      answer?.selectedAnswerIndex != null,
+  ).length;
+
   return (
     <section className="space-y-8">
       <Link
@@ -129,6 +147,32 @@ function QuizReviewPage() {
           </p>
         </article>
       </div>
+
+      <article className="surface-card space-y-4 rounded-2xl p-5">
+        <div>
+          <h2 className="text-lg font-bold text-white">Your performance</h2>
+          <p className="mt-1 text-sm text-text-secondary">
+            See how you performed across the quiz.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-xl border border-success/20 bg-success/5 p-3">
+            <p className="text-2xl font-bold text-success">{correctCount}</p>
+            <p className="mt-1 text-xs text-text-secondary">Correct</p>
+          </div>
+
+          <div className="rounded-xl border border-danger/20 bg-danger/5 p-3">
+            <p className="text-2xl font-bold text-danger">{incorrectCount}</p>
+            <p className="mt-1 text-xs text-text-secondary">Incorrect</p>
+          </div>
+
+          <div className="rounded-xl border border-warning/20 bg-warning/5 p-3">
+            <p className="text-2xl font-bold text-warning">{skippedCount}</p>
+            <p className="mt-1 text-xs text-text-secondary">Skipped</p>
+          </div>
+        </div>
+      </article>
 
       <div className="space-y-5">
         <div>
