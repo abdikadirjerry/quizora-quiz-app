@@ -1,12 +1,5 @@
 import { Link, useLocation, useNavigate, useParams } from "react-router";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  XCircle,
-  Clock3,
-  SkipForward,
-  Trophy,
-} from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock3, Trophy } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import Button from "../components/ui/Button";
 import { getQuizHistory } from "../utils/quizStorage";
@@ -242,10 +235,6 @@ function QuizReviewPage() {
           const selectedIndex = answer?.selectedAnswerIndex;
           const correctIndex =
             question.correctAnswerIndex ?? answer?.correctAnswerIndex;
-
-          const skipped = answer?.skipped || selectedIndex == null;
-          const timedOut = answer?.timedOut;
-          const isCorrect = !skipped && answer?.isCorrect === true;
 
           return (
             <article
