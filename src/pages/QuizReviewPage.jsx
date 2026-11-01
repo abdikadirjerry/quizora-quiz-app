@@ -1,4 +1,4 @@
-import { Link, useLocation, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -27,10 +27,27 @@ function QuizReviewPage() {
 
   const historyPage = location.state?.fromHistoryPage;
 
+  const navigate = useNavigate();
+
   const historyUrl =
     Number.isInteger(historyPage) && historyPage > 1
       ? `/history?page=${historyPage}`
       : "/history";
+
+  function handleRetryQuiz() {
+    navigate("/quiz/play", {
+      state: {
+        categoryId: attempt.category,
+        categoryName:
+          CATEGORY_LABELS[attempt.category] ??
+          attempt.category ??
+          "General Knowledge",
+        difficulty: attempt.difficulty ?? "all",
+        questionCount: attempt.totalQuestions ?? 4,
+        shuffleQuestions: false,
+      },
+    });
+  }
 
   const attempt = getQuizHistory().find((item) => item.id === attemptId);
 
@@ -43,12 +60,16 @@ function QuizReviewPage() {
           description="This quiz attempt may have been deleted."
         />
 
-        <Link to={historyUrl}>
-          <Button variant="secondary">
-            <ArrowLeft size={15} />
-            Back to history
-          </Button>
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Button onClick={handleRetryQuiz}>Retry quiz</Button>
+
+          <Link to={historyUrl}>
+            <Button variant="secondary">
+              <ArrowLeft size={15} />
+              Back to history
+            </Button>
+          </Link>
+        </div>
       </section>
     );
   }
