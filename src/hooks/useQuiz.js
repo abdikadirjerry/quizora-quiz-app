@@ -19,6 +19,8 @@ function createInitialState({ questions, timerDuration }) {
     currentIndex: 0,
     selectedAnswer: null,
     answers: questions.map(() => null),
+    questionTimes: questions.map(() => 0),
+    questionStartedAt: Date.now(),
     timeLeft: timerDuration === 0 ? null : timerDuration,
     status: "playing",
   };
@@ -27,6 +29,7 @@ function createInitialState({ questions, timerDuration }) {
 function makeAnswer(question, answerIndex, outcome = {}) {
   const timedOut = outcome.timedOut === true;
   const skipped = outcome.skipped === true;
+  const timeSpent = Number(outcome.timeSpent) || 0;
 
   return {
     questionId: question.id,
@@ -36,9 +39,17 @@ function makeAnswer(question, answerIndex, outcome = {}) {
       answerIndex !== null && answerIndex === question.correctAnswerIndex,
     timedOut,
     skipped,
+    timeSpent,
   };
 }
 
+function getElapsedTime(state) {
+  if (state.status !== "playing") {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor((Date.now() - state.questionStartedAt) / 1000));
+}
 /**
  * Records the current answer without accidentally erasing an existing
  * answer when the user navigates away without making a new selection.
@@ -56,45 +67,74 @@ function commitCurrent(
 
   const existingAnswer = state.answers[state.currentIndex];
 
-  // Preserve an existing answer when no new answer was selected.
-  // Timer expiry is the exception because it represents a new timeout.
+  const elapsedTime = getElapsedTime(state);
+
+  const timeSpent =
+    (state.questionTimes[state.currentIndex] || 0) + elapsedTime;
+
+  const questionTimes = state.questionTimes.map((time, index) =>
+    index === state.currentIndex ? timeSpent : time,
+  );
+
+  // Preserve an existing answer but still record additional time.
   if (answerIndex === null && existingAnswer && !outcome.timedOut) {
-    return state;
+    const answers = [...state.answers];
+
+    answers[state.currentIndex] = {
+      ...existingAnswer,
+      timeSpent,
+    };
+
+    return {
+      ...state,
+      answers,
+      questionTimes,
+      questionStartedAt: Date.now(),
+    };
   }
 
   const answers = [...state.answers];
 
-  answers[state.currentIndex] = makeAnswer(question, answerIndex, outcome);
+  answers[state.currentIndex] = makeAnswer(question, answerIndex, {
+    ...outcome,
+    timeSpent,
+  });
 
   return {
     ...state,
     answers,
+    questionTimes,
+    questionStartedAt: Date.now(),
   };
 }
 
 function completeState(state) {
-  let next = state;
+  const currentAnswerExists = Boolean(state.answers[state.currentIndex]);
 
-  const currentAnswerAlreadyExists = Boolean(state.answers[state.currentIndex]);
-
-  if (state.selectedAnswer !== null) {
-    next = commitCurrent(state, state.selectedAnswer);
-  } else if (!currentAnswerAlreadyExists) {
-    next = commitCurrent(state, null, { skipped: true });
-  }
+  const next = commitCurrent(
+    state,
+    state.selectedAnswer,
+    state.selectedAnswer === null && !currentAnswerExists
+      ? { skipped: true }
+      : {},
+  );
 
   const answers = next.answers.map((answer, index) => {
     if (answer) {
       return answer;
     }
 
-    return makeAnswer(next.questions[index], null, { skipped: true });
+    return makeAnswer(next.questions[index], null, {
+      skipped: true,
+      timeSpent: next.questionTimes[index] || 0,
+    });
   });
 
   return {
     ...next,
     answers,
     selectedAnswer: null,
+    questionStartedAt: null,
     status: "completed",
   };
 }
@@ -105,6 +145,7 @@ function getNextQuestionState(state, nextIndex, committed) {
     currentIndex: nextIndex,
     selectedAnswer: committed.answers[nextIndex]?.selectedAnswerIndex ?? null,
     timeLeft: state.timerDuration === 0 ? null : state.timerDuration,
+    questionStartedAt: Date.now(),
   };
 }
 
@@ -158,51 +199,47 @@ function quizReducer(state, action) {
     }
 
     case "JUMP": {
+      const nextIndex = action.index;
+
       if (
-        state.status !== "playing" ||
-        !Number.isInteger(action.index) ||
-        action.index < 0 ||
-        action.index >= state.questions.length
+        nextIndex < 0 ||
+        nextIndex >= state.questions.length ||
+        nextIndex === state.currentIndex ||
+        state.status !== "playing"
       ) {
         return state;
       }
 
-      if (action.index === state.currentIndex) {
-        return state;
+      let committed;
+
+      if (state.selectedAnswer !== null) {
+        committed = commitCurrent(state, state.selectedAnswer);
+      } else if (!state.answers[state.currentIndex]) {
+        committed = commitCurrent(state, null, { skipped: true });
+      } else {
+        committed = commitCurrent(state, null);
       }
 
-      // Only commit a new selection when the current question has one.
-      // Merely navigating away must not mark an unanswered question as skipped.
-      const committed =
-        state.selectedAnswer !== null
-          ? commitCurrent(state, state.selectedAnswer)
-          : state;
-
-      return getNextQuestionState(state, action.index, committed);
+      return getNextQuestionState(state, nextIndex, committed);
     }
 
     case "TICK": {
-      if (
-        state.status !== "playing" ||
-        state.timerDuration === 0 ||
-        state.questions.length === 0
-      ) {
+      if (state.timerDuration === 0 || state.status !== "playing") {
         return state;
       }
 
       if (state.timeLeft <= 1) {
-        // A selected answer remains valid when the timer reaches zero.
-        // Otherwise, record that the question timed out.
-        const timedOut =
-          state.selectedAnswer !== null
-            ? commitCurrent(state, state.selectedAnswer)
-            : commitCurrent(state, null, { timedOut: true });
+        const committed = commitCurrent(state, state.selectedAnswer, {
+          timedOut: state.selectedAnswer === null,
+        });
 
-        if (state.currentIndex === state.questions.length - 1) {
-          return completeState(timedOut);
+        const nextIndex = state.currentIndex + 1;
+
+        if (nextIndex >= state.questions.length) {
+          return completeState(committed);
         }
 
-        return getNextQuestionState(state, state.currentIndex + 1, timedOut);
+        return getNextQuestionState(state, nextIndex, committed);
       }
 
       return {
@@ -211,15 +248,30 @@ function quizReducer(state, action) {
       };
     }
 
-    case "PAUSE":
-      return state.status === "playing"
-        ? { ...state, status: "paused" }
-        : state;
+    case "PAUSE": {
+      if (state.status !== "playing") return state;
 
-    case "RESUME":
-      return state.status === "paused"
-        ? { ...state, status: "playing" }
-        : state;
+      const elapsedTime = getElapsedTime(state);
+
+      return {
+        ...state,
+        questionTimes: state.questionTimes.map((time, index) =>
+          index === state.currentIndex ? time + elapsedTime : time,
+        ),
+        questionStartedAt: null,
+        status: "paused",
+      };
+    }
+
+    case "RESUME": {
+      if (state.status !== "paused") return state;
+
+      return {
+        ...state,
+        questionStartedAt: Date.now(),
+        status: "playing",
+      };
+    }
 
     case "RESET":
       return createInitialState({

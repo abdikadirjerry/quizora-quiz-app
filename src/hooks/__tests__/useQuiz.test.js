@@ -218,4 +218,54 @@ describe("useQuiz", () => {
       }),
     );
   });
+  it("records elapsed time when the quiz has no timer", () => {
+    const { result } = renderHook(() => useQuiz(questions, 0));
+
+    act(() => {
+      vi.advanceTimersByTime(5500);
+      result.current.nextQuestion();
+    });
+
+    expect(result.current.answers[0].timeSpent).toBe(5);
+  });
+
+  it("does not count time spent while the quiz is paused", () => {
+    const { result } = renderHook(() => useQuiz(questions, 10));
+
+    act(() => {
+      vi.advanceTimersByTime(3000);
+      result.current.pauseQuiz();
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(5000);
+      result.current.resumeQuiz();
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+      result.current.nextQuestion();
+    });
+
+    expect(result.current.answers[0].timeSpent).toBe(5);
+  });
+
+  it("accumulates time when revisiting a question", () => {
+    const { result } = renderHook(() => useQuiz(questions, 0));
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+      result.current.selectAnswer(1);
+      result.current.nextQuestion();
+    });
+
+    act(() => {
+      result.current.jumpToQuestion(0);
+      vi.advanceTimersByTime(3000);
+      result.current.selectAnswer(1);
+      result.current.nextQuestion();
+    });
+
+    expect(result.current.answers[0].timeSpent).toBe(5);
+  });
 });
