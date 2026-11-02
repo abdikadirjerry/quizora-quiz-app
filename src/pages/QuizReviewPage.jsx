@@ -4,6 +4,7 @@ import PageHeader from "../components/ui/PageHeader";
 import Button from "../components/ui/Button";
 import { getQuizHistory } from "../utils/quizStorage";
 import { QUESTION_BANK } from "../data/questions";
+import { formatSeconds, getQuizTimeStats } from "../utils/quizTimeStats";
 
 const CATEGORY_LABELS = {
   "general-knowledge": "General Knowledge",
@@ -80,6 +81,7 @@ function QuizReviewPage() {
   const score = Number(attempt.score) || 0;
   const totalQuestions = Number(attempt.totalQuestions) || questions.length;
   const accuracy = Number(attempt.accuracy) || 0;
+  const timeStats = getQuizTimeStats(answers);
 
   const correctCount = answers.filter(
     (answer) =>
@@ -248,6 +250,69 @@ function QuizReviewPage() {
         </div>
       </article>
 
+      <article className="surface-card space-y-5 rounded-2xl p-5">
+        <div>
+          <h2 className="text-lg font-bold text-white">Time analysis</h2>
+          <p className="mt-1 text-sm text-text-secondary">
+            Understand how you spent your time during this quiz.
+          </p>
+        </div>
+
+        {timeStats.timedQuestionCount > 0 ? (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-xl border border-info/20 bg-info/5 p-4">
+                <Clock3 size={18} className="text-info" />
+                <p className="mt-3 text-2xl font-bold text-white">
+                  {formatSeconds(timeStats.totalSeconds)}
+                </p>
+                <p className="mt-1 text-xs text-text-secondary">Total time</p>
+              </div>
+
+              <div className="rounded-xl border border-border-subtle bg-surface-raised p-4">
+                <Clock3 size={18} className="text-text-secondary" />
+                <p className="mt-3 text-2xl font-bold text-white">
+                  {formatSeconds(timeStats.averageSeconds)}
+                </p>
+                <p className="mt-1 text-xs text-text-secondary">
+                  Average per question
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-success/20 bg-success/5 p-4">
+                <CheckCircle2 size={18} className="text-success" />
+                <p className="mt-3 text-2xl font-bold text-white">
+                  {formatSeconds(timeStats.fastest.timeSpent)}
+                </p>
+                <p className="mt-1 text-xs text-text-secondary">
+                  Fastest · Question {timeStats.fastest.questionNumber}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-warning/20 bg-warning/5 p-4">
+                <Clock3 size={18} className="text-warning" />
+                <p className="mt-3 text-2xl font-bold text-white">
+                  {formatSeconds(timeStats.slowest.timeSpent)}
+                </p>
+                <p className="mt-1 text-xs text-text-secondary">
+                  Slowest · Question {timeStats.slowest.questionNumber}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-text-secondary">
+              Timing is available for {timeStats.timedQuestionCount} of{" "}
+              {questions.length} questions.
+            </p>
+          </>
+        ) : (
+          <p className="rounded-xl border border-border-subtle bg-surface-raised p-4 text-sm text-text-secondary">
+            Time analysis is unavailable for this attempt because no question
+            timing data was saved.
+          </p>
+        )}
+      </article>
+
       <div className="space-y-5">
         <div>
           <h2 className="text-xl font-bold text-white">Question review</h2>
@@ -341,6 +406,15 @@ function QuizReviewPage() {
                     {question.difficulty}
                   </span>
                 )}
+
+                {typeof answer?.timeSpent === "number" &&
+                  Number.isFinite(answer.timeSpent) &&
+                  answer.timeSpent >= 0 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-info/20 bg-info/5 px-2.5 py-1 text-xs font-medium text-info">
+                      <Clock3 size={13} />
+                      {formatSeconds(answer.timeSpent)}
+                    </span>
+                  )}
               </div>
 
               <h3 className="text-base font-semibold leading-7 text-white">
