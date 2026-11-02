@@ -5,6 +5,7 @@ import Button from "../components/ui/Button";
 import { getQuizHistory } from "../utils/quizStorage";
 import { QUESTION_BANK } from "../data/questions";
 import { formatSeconds, getQuizTimeStats } from "../utils/quizTimeStats";
+import { getQuizPerformanceInsights } from "../utils/quizPerformanceInsights";
 
 const CATEGORY_LABELS = {
   "general-knowledge": "General Knowledge",
@@ -111,6 +112,8 @@ function QuizReviewPage() {
       total: difficultyQuestions.length,
     };
   });
+
+  const performanceInsights = getQuizPerformanceInsights(difficultyStats);
 
   const skippedCount = answers.filter(
     (answer) => answer?.skipped || answer?.selectedAnswerIndex == null,
@@ -248,6 +251,79 @@ function QuizReviewPage() {
             </p>
           )}
         </div>
+      </article>
+
+      <article className="surface-card space-y-5 rounded-2xl p-5">
+        <div>
+          <h2 className="text-lg font-bold text-white">Performance insights</h2>
+          <p className="mt-1 text-sm text-text-secondary">
+            Understand your strengths and discover where to focus your practice.
+          </p>
+        </div>
+
+        {performanceInsights.strongest ? (
+          <>
+            {performanceInsights.strongest.difficulty ===
+            performanceInsights.needsPractice.difficulty ? (
+              <div className="rounded-xl border border-info/20 bg-info/5 p-4">
+                <p className="font-semibold text-white">
+                  Consistent performance
+                </p>
+                <p className="mt-2 text-sm leading-6 text-text-secondary">
+                  {performanceInsights.message}
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-success/20 bg-success/5 p-4">
+                  <p className="text-sm font-medium text-success">
+                    Your strongest area
+                  </p>
+
+                  <p className="mt-2 text-xl font-bold text-white">
+                    {performanceInsights.strongest.difficulty}
+                  </p>
+
+                  <p className="mt-1 text-sm text-text-secondary">
+                    {performanceInsights.strongest.accuracy}% accuracy
+                  </p>
+
+                  <p className="mt-1 text-xs text-text-secondary">
+                    {performanceInsights.strongest.correct}/
+                    {performanceInsights.strongest.total} correct
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-warning/20 bg-warning/5 p-4">
+                  <p className="text-sm font-medium text-warning">
+                    Area to practise
+                  </p>
+
+                  <p className="mt-2 text-xl font-bold text-white">
+                    {performanceInsights.needsPractice.difficulty}
+                  </p>
+
+                  <p className="mt-1 text-sm text-text-secondary">
+                    {performanceInsights.needsPractice.accuracy}% accuracy
+                  </p>
+
+                  <p className="mt-1 text-xs text-text-secondary">
+                    {performanceInsights.needsPractice.correct}/
+                    {performanceInsights.needsPractice.total} correct
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <p className="text-sm leading-6 text-text-secondary">
+              {performanceInsights.message}
+            </p>
+          </>
+        ) : (
+          <p className="rounded-xl border border-border-subtle bg-surface-raised p-4 text-sm text-text-secondary">
+            {performanceInsights.message}
+          </p>
+        )}
       </article>
 
       <article className="surface-card space-y-5 rounded-2xl p-5">
