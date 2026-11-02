@@ -69,8 +69,12 @@ function commitCurrent(
 
   const elapsedTime = getElapsedTime(state);
 
-  const timeSpent =
-    (state.questionTimes[state.currentIndex] || 0) + elapsedTime;
+  const previousTime = Math.max(
+    state.questionTimes[state.currentIndex] || 0,
+    state.answers[state.currentIndex]?.timeSpent || 0,
+  );
+
+  const timeSpent = previousTime + elapsedTime;
 
   const questionTimes = state.questionTimes.map((time, index) =>
     index === state.currentIndex ? timeSpent : time,

@@ -253,16 +253,36 @@ describe("useQuiz", () => {
   it("accumulates time when revisiting a question", () => {
     const { result } = renderHook(() => useQuiz(questions, 0));
 
+    // First visit: spend 2 seconds on question 1.
     act(() => {
       vi.advanceTimersByTime(2000);
-      result.current.selectAnswer(1);
-      result.current.nextQuestion();
     });
 
     act(() => {
-      result.current.jumpToQuestion(0);
-      vi.advanceTimersByTime(3000);
       result.current.selectAnswer(1);
+    });
+
+    act(() => {
+      result.current.nextQuestion();
+    });
+
+    expect(result.current.answers[0].timeSpent).toBe(2);
+
+    // Return to question 1.
+    act(() => {
+      result.current.jumpToQuestion(0);
+    });
+
+    // Second visit: spend another 3 seconds.
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+
+    act(() => {
+      result.current.selectAnswer(1);
+    });
+
+    act(() => {
       result.current.nextQuestion();
     });
 
