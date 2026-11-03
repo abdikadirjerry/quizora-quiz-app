@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { ArrowLeft, CheckCircle2, Clock3, Trophy } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
@@ -19,6 +20,9 @@ const CATEGORY_LABELS = {
 
 function QuizReviewPage() {
   const { attemptId } = useParams();
+
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+
   const location = useLocation();
 
   const historyPage = location.state?.fromHistoryPage;
@@ -132,6 +136,26 @@ function QuizReviewPage() {
     skippedCount,
     totalQuestions,
   });
+
+  const currentQuestion = questions[currentQuestionIndex];
+  const currentAnswer = answers[currentQuestionIndex];
+
+  const isFirstQuestion = currentQuestionIndex === 0;
+  const isLastQuestion = currentQuestionIndex === questions.length - 1;
+
+  function handlePreviousQuestion() {
+    setCurrentQuestionIndex((currentIndex) => Math.max(0, currentIndex - 1));
+  }
+
+  function handleNextQuestion() {
+    setCurrentQuestionIndex((currentIndex) =>
+      Math.min(questions.length - 1, currentIndex + 1),
+    );
+  }
+
+  function handleSelectQuestion(index) {
+    setCurrentQuestionIndex(index);
+  }
 
   return (
     <section className="space-y-8">
@@ -457,154 +481,206 @@ function QuizReviewPage() {
         <div>
           <h2 className="text-xl font-bold text-white">Question review</h2>
           <p className="mt-1 text-sm text-text-secondary">
-            Review your answers and learn from each question.
+            Review your answers one question at a time.
           </p>
         </div>
 
-        <div
-          className="flex flex-wrap gap-3"
-          aria-label="Navigate to a question"
-        >
-          {questions.map((question, index) => {
-            const answer = answers[index];
-            const selectedIndex = answer?.selectedAnswerIndex;
-            const skipped = answer?.skipped || selectedIndex == null;
-            const isCorrect = !skipped && answer?.isCorrect === true;
-
-            let statusStyle =
-              "border-danger/40 bg-danger/10 text-danger hover:bg-danger/20";
-
-            if (isCorrect) {
-              statusStyle =
-                "border-success/40 bg-success/10 text-success hover:bg-success/20";
-            } else if (skipped) {
-              statusStyle =
-                "border-warning/40 bg-warning/10 text-warning hover:bg-warning/20";
-            }
-
-            return (
-              <button
-                key={question?.id ?? index}
-                type="button"
-                aria-label={`Go to question ${index + 1}: ${
-                  isCorrect ? "correct" : skipped ? "skipped" : "incorrect"
-                }`}
-                onClick={() =>
-                  document
-                    .getElementById(`question-${index + 1}`)
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                }
-                className={`flex h-11 w-11 items-center justify-center rounded-xl border text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-info ${statusStyle}`}
-              >
-                {index + 1}
-              </button>
-            );
-          })}
-        </div>
-
-        {questions.map((question, index) => {
-          const answer = answers[index];
-
-          if (!question) {
-            return (
-              <article
-                key={answer?.questionId ?? index}
-                className="surface-card rounded-2xl p-5"
-              >
-                <p className="text-sm text-text-secondary">
-                  Question {index + 1} is no longer available.
-                </p>
-              </article>
-            );
-          }
-
-          const selectedIndex = answer?.selectedAnswerIndex;
-          const correctIndex =
-            question.correctAnswerIndex ?? answer?.correctAnswerIndex;
-
-          return (
-            <article
-              id={`question-${index + 1}`}
-              key={question.id ?? index}
-              className="surface-card scroll-mt-6 space-y-5 rounded-2xl p-5 sm:p-6"
-            >
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-xs font-semibold text-text-secondary">
-                  QUESTION {index + 1} OF {questions.length}
+        {questions.length > 0 ? (
+          <>
+            {/* Question progress */}
+            <div className="surface-card space-y-3 rounded-2xl p-5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold text-white">
+                  Question {currentQuestionIndex + 1} of {questions.length}
                 </span>
-
-                {question.difficulty && (
-                  <span
-                    className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                      question.difficulty === "Easy"
-                        ? "border-success/30 bg-success/10 text-success"
-                        : question.difficulty === "Medium"
-                          ? "border-warning/30 bg-warning/10 text-warning"
-                          : "border-danger/30 bg-danger/10 text-danger"
-                    }`}
-                  >
-                    {question.difficulty}
-                  </span>
-                )}
-
-                {typeof answer?.timeSpent === "number" &&
-                  Number.isFinite(answer.timeSpent) &&
-                  answer.timeSpent >= 0 && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-info/20 bg-info/5 px-2.5 py-1 text-xs font-medium text-info">
-                      <Clock3 size={13} />
-                      {formatSeconds(answer.timeSpent)}
-                    </span>
+                <span className="text-sm text-text-secondary">
+                  {Math.round(
+                    ((currentQuestionIndex + 1) / questions.length) * 100,
                   )}
+                  %
+                </span>
               </div>
 
-              <h3 className="text-base font-semibold leading-7 text-white">
-                {question.question}
-              </h3>
+              <div
+                className="h-2 overflow-hidden rounded-full bg-surface-raised"
+                role="progressbar"
+                aria-label="Review progress"
+                aria-valuemin={0}
+                aria-valuemax={questions.length}
+                aria-valuenow={currentQuestionIndex + 1}
+              >
+                <div
+                  className="h-full rounded-full bg-info transition-all duration-300"
+                  style={{
+                    width: `${
+                      ((currentQuestionIndex + 1) / questions.length) * 100
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
 
-              <div className="space-y-3">
-                {question.options.map((option, optionIndex) => {
-                  const isSelected = optionIndex === selectedIndex;
-                  const isAnswer = optionIndex === correctIndex;
+            {/* Question navigator */}
+            <div
+              className="flex flex-wrap gap-3"
+              aria-label="Navigate to a question"
+            >
+              {questions.map((question, index) => {
+                const answer = answers[index];
+                const selectedIndex = answer?.selectedAnswerIndex;
+                const skipped = answer?.skipped || selectedIndex == null;
+                const isCorrect = !skipped && answer?.isCorrect === true;
+                const isActive = index === currentQuestionIndex;
 
-                  let optionStyle =
-                    "border-border-subtle bg-surface-raised text-text-secondary";
+                let statusStyle =
+                  "border-danger/40 bg-danger/10 text-danger hover:bg-danger/20";
 
-                  if (isAnswer) {
-                    optionStyle =
-                      "border-success/40 bg-success/10 text-success";
-                  } else if (isSelected) {
-                    optionStyle = "border-danger/40 bg-danger/10 text-danger";
-                  }
+                if (isCorrect) {
+                  statusStyle =
+                    "border-success/40 bg-success/10 text-success hover:bg-success/20";
+                } else if (skipped) {
+                  statusStyle =
+                    "border-warning/40 bg-warning/10 text-warning hover:bg-warning/20";
+                }
 
-                  return (
-                    <div
-                      key={`${question.id}-${optionIndex}`}
-                      className={`flex items-center justify-between gap-3 rounded-xl border p-4 text-sm ${optionStyle}`}
-                    >
-                      <span>
-                        {String.fromCharCode(65 + optionIndex)}. {option}
+                return (
+                  <button
+                    key={question?.id ?? index}
+                    type="button"
+                    aria-label={`Go to question ${index + 1}: ${
+                      isCorrect ? "correct" : skipped ? "skipped" : "incorrect"
+                    }`}
+                    aria-current={isActive ? "step" : undefined}
+                    onClick={() => handleSelectQuestion(index)}
+                    className={`flex h-11 w-11 items-center justify-center rounded-xl border text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-info ${
+                      isActive
+                        ? "ring-2 ring-info ring-offset-2 ring-offset-background"
+                        : ""
+                    } ${statusStyle}`}
+                  >
+                    {index + 1}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Current question */}
+            <article className="surface-card scroll-mt-6 space-y-5 rounded-2xl p-5 sm:p-6">
+              {currentQuestion ? (
+                <>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-xs font-semibold text-text-secondary">
+                      QUESTION {currentQuestionIndex + 1} OF {questions.length}
+                    </span>
+
+                    {currentQuestion.difficulty && (
+                      <span
+                        className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                          currentQuestion.difficulty === "Easy"
+                            ? "border-success/30 bg-success/10 text-success"
+                            : currentQuestion.difficulty === "Medium"
+                              ? "border-warning/30 bg-warning/10 text-warning"
+                              : "border-danger/30 bg-danger/10 text-danger"
+                        }`}
+                      >
+                        {currentQuestion.difficulty}
                       </span>
+                    )}
 
-                      <span className="flex shrink-0 items-center gap-2 text-xs font-semibold">
-                        {isSelected && "Your answer"}
-                        {isAnswer && "Correct answer"}
-                      </span>
+                    {typeof currentAnswer?.timeSpent === "number" &&
+                      Number.isFinite(currentAnswer.timeSpent) &&
+                      currentAnswer.timeSpent >= 0 && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-info/20 bg-info/5 px-2.5 py-1 text-xs font-medium text-info">
+                          <Clock3 size={13} />
+                          {formatSeconds(currentAnswer.timeSpent)}
+                        </span>
+                      )}
+                  </div>
+
+                  <h3 className="text-base font-semibold leading-7 text-white">
+                    {currentQuestion.question}
+                  </h3>
+
+                  <div className="space-y-3">
+                    {currentQuestion.options.map((option, optionIndex) => {
+                      const isSelected =
+                        optionIndex === currentAnswer?.selectedAnswerIndex;
+
+                      const correctIndex =
+                        currentQuestion.correctAnswerIndex ??
+                        currentAnswer?.correctAnswerIndex;
+
+                      const isAnswer = optionIndex === correctIndex;
+
+                      let optionStyle =
+                        "border-border-subtle bg-surface-raised text-text-secondary";
+
+                      if (isAnswer) {
+                        optionStyle =
+                          "border-success/40 bg-success/10 text-success";
+                      } else if (isSelected) {
+                        optionStyle =
+                          "border-danger/40 bg-danger/10 text-danger";
+                      }
+
+                      return (
+                        <div
+                          key={`${currentQuestion.id}-${optionIndex}`}
+                          className={`flex items-center justify-between gap-3 rounded-xl border p-4 text-sm ${optionStyle}`}
+                        >
+                          <span>
+                            {String.fromCharCode(65 + optionIndex)}. {option}
+                          </span>
+
+                          <span className="flex shrink-0 items-center gap-2 text-xs font-semibold">
+                            {isSelected && "Your answer"}
+                            {isAnswer && "Correct answer"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {currentQuestion.explanation && (
+                    <div className="rounded-xl border border-info/20 bg-info/5 p-4">
+                      <p className="text-xs font-semibold text-info">
+                        Explanation
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-text-secondary">
+                        {currentQuestion.explanation}
+                      </p>
                     </div>
-                  );
-                })}
-              </div>
-
-              {question.explanation && (
-                <div className="rounded-xl border border-info/20 bg-info/5 p-4">
-                  <p className="text-xs font-semibold text-info">Explanation</p>
-                  <p className="mt-2 text-sm leading-6 text-text-secondary">
-                    {question.explanation}
-                  </p>
-                </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-text-secondary">
+                  This question is no longer available.
+                </p>
               )}
             </article>
-          );
-        })}
+
+            {/* Previous and Next */}
+            <div className="flex items-center justify-between gap-3">
+              <Button
+                variant="secondary"
+                onClick={handlePreviousQuestion}
+                disabled={isFirstQuestion}
+              >
+                <ArrowLeft size={15} />
+                Previous
+              </Button>
+
+              <Button onClick={handleNextQuestion} disabled={isLastQuestion}>
+                Next
+                <span aria-hidden="true">→</span>
+              </Button>
+            </div>
+          </>
+        ) : (
+          <p className="surface-card rounded-2xl p-5 text-sm text-text-secondary">
+            No questions are available for this attempt.
+          </p>
+        )}
       </div>
 
       <Link to={historyUrl}>
