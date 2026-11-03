@@ -6,6 +6,7 @@ import { getQuizHistory } from "../utils/quizStorage";
 import { QUESTION_BANK } from "../data/questions";
 import { formatSeconds, getQuizTimeStats } from "../utils/quizTimeStats";
 import { getQuizPerformanceInsights } from "../utils/quizPerformanceInsights";
+import { getQuizReviewRecommendations } from "../utils/quizReviewRecommendations";
 
 const CATEGORY_LABELS = {
   "general-knowledge": "General Knowledge",
@@ -125,6 +126,12 @@ function QuizReviewPage() {
       !answer?.skipped &&
       answer?.selectedAnswerIndex != null,
   ).length;
+
+  const reviewRecommendations = getQuizReviewRecommendations({
+    accuracy,
+    skippedCount,
+    totalQuestions,
+  });
 
   return (
     <section className="space-y-8">
@@ -324,6 +331,63 @@ function QuizReviewPage() {
             {performanceInsights.message}
           </p>
         )}
+      </article>
+
+      <article className="surface-card space-y-5 rounded-2xl p-5">
+        <div>
+          <h2 className="text-lg font-bold text-white">Your next steps</h2>
+          <p className="mt-1 text-sm text-text-secondary">
+            Personalized recommendations to help you improve your quiz
+            performance.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {reviewRecommendations.map((recommendation) => {
+            const priorityStyles = {
+              high: "border-danger/20 bg-danger/5",
+              medium: "border-warning/20 bg-warning/5",
+              low: "border-info/20 bg-info/5",
+              success: "border-success/20 bg-success/5",
+              info: "border-border-subtle bg-surface-raised",
+            };
+
+            const priorityLabels = {
+              high: "High priority",
+              medium: "Recommended",
+              low: "Next challenge",
+              success: "Excellent",
+              info: "Getting started",
+            };
+
+            return (
+              <div
+                key={recommendation.id}
+                className={`rounded-xl border p-4 ${
+                  priorityStyles[recommendation.priority] ?? priorityStyles.info
+                }`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-semibold text-white">
+                    {recommendation.title}
+                  </h3>
+
+                  <span className="rounded-full border border-current/20 px-2.5 py-1 text-xs font-medium text-text-secondary">
+                    {priorityLabels[recommendation.priority] ?? "Suggestion"}
+                  </span>
+                </div>
+
+                <p className="mt-2 text-sm leading-6 text-text-secondary">
+                  {recommendation.message}
+                </p>
+
+                <p className="mt-3 text-sm font-semibold text-white">
+                  Next step: {recommendation.action}
+                </p>
+              </div>
+            );
+          })}
+        </div>
       </article>
 
       <article className="surface-card space-y-5 rounded-2xl p-5">
