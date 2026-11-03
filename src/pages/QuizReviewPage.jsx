@@ -23,6 +23,10 @@ function QuizReviewPage() {
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
+  const [reviewedQuestions, setReviewedQuestions] = useState(
+    () => new Set([0]),
+  );
+
   const location = useLocation();
 
   const historyPage = location.state?.fromHistoryPage;
@@ -148,14 +152,38 @@ function QuizReviewPage() {
   }
 
   function handleNextQuestion() {
-    setCurrentQuestionIndex((currentIndex) =>
-      Math.min(questions.length - 1, currentIndex + 1),
-    );
+    setCurrentQuestionIndex((currentIndex) => {
+      const nextIndex = Math.min(questions.length - 1, currentIndex + 1);
+
+      setReviewedQuestions((previous) => {
+        const updated = new Set(previous);
+        updated.add(nextIndex);
+        return updated;
+      });
+
+      return nextIndex;
+    });
   }
 
   function handleSelectQuestion(index) {
     setCurrentQuestionIndex(index);
+
+    setReviewedQuestions((previous) => {
+      const updated = new Set(previous);
+      updated.add(index);
+      return updated;
+    });
   }
+
+  const reviewedCount = reviewedQuestions.size;
+
+  const reviewProgress =
+    questions.length > 0
+      ? Math.round((reviewedCount / questions.length) * 100)
+      : 0;
+
+  const isReviewComplete =
+    questions.length > 0 && reviewedCount === questions.length;
 
   return (
     <section className="space-y-8">
@@ -491,13 +519,10 @@ function QuizReviewPage() {
             <div className="surface-card space-y-3 rounded-2xl p-5">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm font-semibold text-white">
-                  Question {currentQuestionIndex + 1} of {questions.length}
+                  {reviewedCount} of {questions.length} questions reviewed
                 </span>
                 <span className="text-sm text-text-secondary">
-                  {Math.round(
-                    ((currentQuestionIndex + 1) / questions.length) * 100,
-                  )}
-                  %
+                  {reviewProgress}%
                 </span>
               </div>
 
@@ -507,15 +532,11 @@ function QuizReviewPage() {
                 aria-label="Review progress"
                 aria-valuemin={0}
                 aria-valuemax={questions.length}
-                aria-valuenow={currentQuestionIndex + 1}
+                aria-valuenow={reviewedCount}
               >
                 <div
                   className="h-full rounded-full bg-info transition-all duration-300"
-                  style={{
-                    width: `${
-                      ((currentQuestionIndex + 1) / questions.length) * 100
-                    }%`,
-                  }}
+                  style={{ width: `${reviewProgress}%` }}
                 />
               </div>
             </div>
@@ -675,6 +696,51 @@ function QuizReviewPage() {
                 <span aria-hidden="true">→</span>
               </Button>
             </div>
+            {isReviewComplete && (
+              <section className="surface-card space-y-5 rounded-2xl border border-success/30 p-6">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 size={28} className="shrink-0 text-success" />
+
+                  <div>
+                    <h2 className="text-xl font-bold text-white">
+                      Review completed!
+                    </h2>
+
+                    <p className="mt-1 text-sm text-text-secondary">
+                      You've reviewed all {questions.length} questions.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-xl bg-surface-raised p-3">
+                    <p className="text-xs text-text-secondary">Score</p>
+                    <p className="mt-1 text-xl font-bold text-white">
+                      {score}/{totalQuestions}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-surface-raised p-3">
+                    <p className="text-xs text-text-secondary">Accuracy</p>
+                    <p className="mt-1 text-xl font-bold text-white">
+                      {accuracy}%
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-surface-raised p-3">
+                    <p className="text-xs text-text-secondary">Reviewed</p>
+                    <p className="mt-1 text-xl font-bold text-white">
+                      {reviewedCount}/{questions.length}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-sm leading-6 text-text-secondary">
+                  Great work! Use what you've learned to improve your next
+                  attempt.
+                </p>
+              </section>
+            )}
           </>
         ) : (
           <p className="surface-card rounded-2xl p-5 text-sm text-text-secondary">
